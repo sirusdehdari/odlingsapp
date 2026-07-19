@@ -105,6 +105,13 @@ function wireNeighborPicker(rowsContainerId, addBtnId, excludeId, initialIds, on
     `;
     rowsContainer.appendChild(row);
     const select = row.querySelector('select');
+    // A freshly created <select> has no <option> elements yet, so setting
+    // .value before populating options is silently ignored by the browser.
+    // Build this row's own option list first so the initial selection actually sticks.
+    const initialOptionsHtml = otherBoxes()
+      .map(b => `<option value="${b.id}" ${b.id === selectedId ? 'selected' : ''}>${b.name}</option>`)
+      .join('');
+    select.innerHTML = `<option value="">— Välj låda —</option>${initialOptionsHtml}`;
     select.value = selectedId || '';
     select.addEventListener('change', refreshOptions);
     row.querySelector('.neighbor-remove-btn').addEventListener('click', () => {
