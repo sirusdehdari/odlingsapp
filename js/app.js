@@ -22,6 +22,77 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+// Returns which perioder-index (0-5, matching MONTH_LABELS) today falls into.
+// Written as explicit month checks (not modulo math) so the Nov–Mar
+// year-boundary case can't accidentally be miscalculated.
+function currentPeriodIndex(date = new Date()) {
+  const m = date.getMonth(); // 0 = jan … 11 = dec
+  if (m === 3 || m === 4) return 0;  // apr, maj
+  if (m === 5) return 1;             // jun
+  if (m === 6) return 2;             // jul
+  if (m === 7) return 3;             // aug
+  if (m === 8 || m === 9) return 4;  // sep, okt
+  return 5;                          // nov, dec, jan, feb, mar
+}
+
+function isModalOpen() {
+  return document.getElementById('modal-overlay').classList.contains('open');
+}
+
+function refreshFromExternalChange() {
+  state = loadState();
+  if (isModalOpen()) closeModal();
+  render();
+}
+
+// ---------- BACKUP / ÅTERSTÄLLNING ----------
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function exportData() {
+  const dataStr = JSON.stringify(state, null, 2);
+  const filename = `odlingsapp-backup-${todayStr()}.json`;
+  const blob = new Blob([dataStr], { type: 'application/json' });
+
+  if (navigator.canShare) {
+    try {
+      const file = new File([blob], filename, { type: 'application/json' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Odlingsapp – backup' });
+        return;
+      }
+    } catch (e) { /* user cancelled or share failed – fall back to download */ }
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importDataFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (!parsed.boxDefs || !parsed.boxes) throw new Error('Ogiltigt format');
+      state = parsed;
+      saveState();
+      render();
+      alert('Data återställd!');
+    } catch (e) {
+      alert('Kunde inte läsa filen – är det en giltig backup-fil från appen?');
+    }
+  };
+  reader.readAsText(file);
+}
+
 // ---------- NAVIGATION ----------
 
 const VIEWS = ['hem', 'lador', 'grodor', 'barbuskar', 'dagbok', 'vader'];
@@ -66,6 +137,17 @@ function renderHem() {
       </p>
     </div>
     <div class="card">
+      <div class="section-title" style="margin-top:0">Säkerhetskopiera</div>
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.6;margin-bottom:12px">
+        All data sparas lokalt på den här telefonen. Exportera en backup-fil då och då som extra trygghet.
+      </p>
+      <div style="display:flex;gap:8px">
+        <button class="chip active" id="export-btn" style="flex:1;padding:10px;font-size:0.85rem">Exportera</button>
+        <button class="chip" id="import-btn" style="flex:1;padding:10px;font-size:0.85rem">Importera</button>
+      </div>
+      <input type="file" id="import-file-input" accept="application/json" style="display:none">
+    </div>
+    <div class="card">
       <div class="section-title" style="margin-top:0">Kommer snart</div>
       <p style="font-size:0.85rem;color:var(--muted);line-height:1.6">
         Den här vyn kommer visa veckans att-göra (vattna, gödsla, skörda) baserat på vad du loggat och dagens datum, plus väderprognos.
@@ -96,10 +178,12 @@ function renderLador() {
 function renderBoxTile(box) {
   const cropId = state.boxes[box.id];
   const crop = cropId ? CROPS[cropId] : null;
+  const status = crop ? crop.perioder[currentPeriodIndex()] : null;
   return `
     <button class="box-tile zone-${box.zone}" data-box="${box.id}">
       <div class="box-name">${box.name}</div>
       <div class="box-crop ${crop ? '' : 'empty'}">${crop ? crop.name : 'Tom'}</div>
+      ${status ? `<div class="status-pill ${status.cls}">${status.label}</div>` : ''}
     </button>
   `;
 }
@@ -220,8 +304,11 @@ function openBoxEditor(boxId) {
 // ---------- GRÖDOR ----------
 
 let cropFilter = { zone: 'alla', maintenance: 'alla' };
+let grodorMode = { view: 'lista', schemaZone: 'skugga' };
 
 function renderGrodor() {
+  if (grodorMode.view === 'schema') return renderGrodorSchema();
+
   const entries = Object.entries(CROPS)
     .filter(([, c]) => cropFilter.zone === 'alla' || c.zone === cropFilter.zone)
     .filter(([, c]) => cropFilter.maintenance === 'alla' || c.maintenance === cropFilter.maintenance)
@@ -229,6 +316,10 @@ function renderGrodor() {
 
   return `
     <h2>Grödor</h2>
+    <div class="schema-toggle">
+      <button class="chip active" id="mode-lista-btn">Lista</button>
+      <button class="chip" id="mode-schema-btn">📅 Visa som schema</button>
+    </div>
     <div class="filter-bar">
       ${chip('zone', 'alla', 'Alla zoner')}
       ${chip('zone', 'sol', '☀️ Sol')}
@@ -252,6 +343,43 @@ function renderGrodor() {
         </div>
       </button>
     `).join('') || '<div class="empty-state">Inga grödor matchar filtret.</div>'}
+  `;
+}
+
+function renderGrodorSchema() {
+  const entries = Object.entries(CROPS)
+    .filter(([, c]) => c.zone === grodorMode.schemaZone || c.zone === 'valfri')
+    .sort((a, b) => a[1].name.localeCompare(b[1].name, 'sv'));
+
+  const rows = entries.map(([id, c]) => `
+    <tr>
+      <td><button class="crop-name-cell" data-crop="${id}">${c.name}</button></td>
+      ${c.perioder.map(p => `<td><div class="cell ${p.cls}">${p.label}</div></td>`).join('')}
+    </tr>
+  `).join('');
+
+  return `
+    <h2>Grödor</h2>
+    <div class="schema-toggle">
+      <button class="chip" id="mode-lista-btn">Lista</button>
+      <button class="chip active" id="mode-schema-btn">📅 Visa som schema</button>
+    </div>
+    <div class="schema-toggle">
+      <button class="chip ${grodorMode.schemaZone === 'skugga' ? 'active' : ''}" id="schema-skugga-btn">🌓 Häcken (skugga)</button>
+      <button class="chip ${grodorMode.schemaZone === 'sol' ? 'active' : ''}" id="schema-sol-btn">☀️ Soliga läget</button>
+    </div>
+    <div class="table-wrap">
+      <table class="schedule">
+        <thead>
+          <tr>
+            <th>Gröda</th>
+            ${MONTH_LABELS.map(m => `<th>${m}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <p style="font-size:0.78rem;color:var(--muted)">Örter som passar i båda zonerna visas i båda scheman.</p>
   `;
 }
 
@@ -387,6 +515,28 @@ function attachViewHandlers() {
       render();
     });
   });
+
+  const modeListaBtn = document.getElementById('mode-lista-btn');
+  const modeSchemaBtn = document.getElementById('mode-schema-btn');
+  if (modeListaBtn) modeListaBtn.addEventListener('click', () => { grodorMode.view = 'lista'; render(); });
+  if (modeSchemaBtn) modeSchemaBtn.addEventListener('click', () => { grodorMode.view = 'schema'; render(); });
+  const schemaSkuggaBtn = document.getElementById('schema-skugga-btn');
+  const schemaSolBtn = document.getElementById('schema-sol-btn');
+  if (schemaSkuggaBtn) schemaSkuggaBtn.addEventListener('click', () => { grodorMode.schemaZone = 'skugga'; render(); });
+  if (schemaSolBtn) schemaSolBtn.addEventListener('click', () => { grodorMode.schemaZone = 'sol'; render(); });
+  document.querySelectorAll('.crop-name-cell[data-crop]').forEach(el => {
+    el.addEventListener('click', () => openCropModal(el.dataset.crop));
+  });
+
+  const exportBtn = document.getElementById('export-btn');
+  const importBtn = document.getElementById('import-btn');
+  const importFileInput = document.getElementById('import-file-input');
+  if (exportBtn) exportBtn.addEventListener('click', exportData);
+  if (importBtn) importBtn.addEventListener('click', () => importFileInput.click());
+  if (importFileInput) importFileInput.addEventListener('change', () => {
+    if (importFileInput.files[0]) importDataFile(importFileInput.files[0]);
+    importFileInput.value = '';
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -399,9 +549,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY) refreshFromExternalChange();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshFromExternalChange();
+  });
+
   render();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().catch(() => {});
   }
 });

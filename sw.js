@@ -1,4 +1,4 @@
-const CACHE_NAME = 'odlingsapp-v1';
+const CACHE_NAME = 'odlingsapp-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -27,20 +27,19 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Network-first: always fetch the latest version when online (so a single
+// reload shows updates), fall back to cache only when offline in the garden.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

@@ -289,3 +289,63 @@ select.crop-picker {
   text-align: center;
   margin-top: 4px;
 }
+
+.status-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+/* ── SCHEMA TABLE (Grödor > Visa som schema) ── */
+.schema-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+table.schedule {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+table.schedule thead th {
+  background: var(--soil);
+  color: #F7F4EF;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 10px 8px;
+  text-align: center;
+}
+table.schedule thead th:first-child { text-align: left; min-width: 130px; }
+table.schedule tbody tr { border-bottom: 1px solid var(--border); }
+table.schedule tbody tr:last-child { border-bottom: none; }
+table.schedule td { padding: 0; border-right: 1px solid var(--border); vertical-align: middle; }
+table.schedule td:last-child { border-right: none; }
+table.schedule .crop-name-cell {
+  padding: 10px 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--soil);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+  width: 100%;
+}
+table.schedule .cell {
+  padding: 6px 6px;
+  font-size: 0.68rem;
+}
