@@ -290,6 +290,22 @@ select.crop-picker {
   margin-top: 4px;
 }
 
+.neighbor-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.neighbor-row select { flex: 1; margin-top: 0; }
+.neighbor-remove-btn {
+  background: none;
+  border: none;
+  color: #922B21;
+  font-size: 1.1rem;
+  padding: 6px 10px;
+  flex-shrink: 0;
+}
+
 .status-pill {
   display: inline-block;
   padding: 3px 9px;

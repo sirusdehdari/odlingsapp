@@ -35,6 +35,94 @@ function currentPeriodIndex(date = new Date()) {
   return 5;                          // nov, dec, jan, feb, mar
 }
 
+const MAX_NEIGHBORS = 8;
+
+function getBoxNeighbors(boxId) {
+  const box = state.boxDefs.find(b => b.id === boxId);
+  return (box && box.neighbors) || [];
+}
+
+// Keeps neighbor relationships symmetric: if A gets B added/removed as a
+// neighbor, B's own list is updated to match automatically.
+function setBoxNeighbors(boxId, newNeighborIds) {
+  const box = state.boxDefs.find(b => b.id === boxId);
+  if (!box) return;
+  const oldNeighborIds = box.neighbors || [];
+  const added = newNeighborIds.filter(id => !oldNeighborIds.includes(id));
+  const removed = oldNeighborIds.filter(id => !newNeighborIds.includes(id));
+  box.neighbors = newNeighborIds;
+  added.forEach(otherId => {
+    const other = state.boxDefs.find(b => b.id === otherId);
+    if (!other) return;
+    other.neighbors = other.neighbors || [];
+    if (!other.neighbors.includes(boxId)) other.neighbors.push(boxId);
+  });
+  removed.forEach(otherId => {
+    const other = state.boxDefs.find(b => b.id === otherId);
+    if (!other) return;
+    other.neighbors = (other.neighbors || []).filter(id => id !== boxId);
+  });
+}
+
+// Builds and wires up the dynamic "add neighbor" row list inside a modal.
+// excludeId may be undefined (used when adding a brand new box that has no id yet).
+function wireNeighborPicker(rowsContainerId, addBtnId, excludeId, initialIds, onChange) {
+  const rowsContainer = document.getElementById(rowsContainerId);
+  const addBtn = document.getElementById(addBtnId);
+  let rowIdCounter = 0;
+
+  function otherBoxes() {
+    return state.boxDefs.filter(b => b.id !== excludeId);
+  }
+
+  function currentSelectedIds() {
+    return Array.from(rowsContainer.querySelectorAll('select.neighbor-select'))
+      .map(s => s.value)
+      .filter(Boolean);
+  }
+
+  function refreshOptions() {
+    const selected = currentSelectedIds();
+    rowsContainer.querySelectorAll('select.neighbor-select').forEach(sel => {
+      const own = sel.value;
+      const optionsHtml = otherBoxes()
+        .filter(b => b.id === own || !selected.includes(b.id))
+        .map(b => `<option value="${b.id}" ${b.id === own ? 'selected' : ''}>${b.name}</option>`)
+        .join('');
+      sel.innerHTML = `<option value="">— Välj låda —</option>${optionsHtml}`;
+      sel.value = own;
+    });
+    addBtn.style.display = rowsContainer.children.length >= MAX_NEIGHBORS ? 'none' : '';
+    if (onChange) onChange();
+  }
+
+  function addRow(selectedId) {
+    const row = document.createElement('div');
+    row.className = 'neighbor-row';
+    row.innerHTML = `
+      <select class="crop-picker neighbor-select"></select>
+      <button type="button" class="neighbor-remove-btn">✕</button>
+    `;
+    rowsContainer.appendChild(row);
+    const select = row.querySelector('select');
+    select.value = selectedId || '';
+    select.addEventListener('change', refreshOptions);
+    row.querySelector('.neighbor-remove-btn').addEventListener('click', () => {
+      row.remove();
+      refreshOptions();
+    });
+    refreshOptions();
+  }
+
+  initialIds.forEach(id => addRow(id));
+  addBtn.addEventListener('click', () => {
+    if (rowsContainer.children.length < MAX_NEIGHBORS) addRow('');
+  });
+  refreshOptions();
+
+  return { getSelectedIds: currentSelectedIds };
+}
+
 function isModalOpen() {
   return document.getElementById('modal-overlay').classList.contains('open');
 }
@@ -204,6 +292,11 @@ function openAddBoxModal() {
       </select>
     </div>
     <div class="modal-section">
+      <p class="modal-section-title">Vilka lådor ligger den nära? (valfritt)</p>
+      <div id="neighbor-rows"></div>
+      <button type="button" class="chip" id="neighbor-add-btn">+ Lägg till granne</button>
+    </div>
+    <div class="modal-section">
       <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="new-box-save-btn">Lägg till</button>
     </div>
   `;
@@ -211,10 +304,16 @@ function openAddBoxModal() {
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 
+  const neighborPicker = wireNeighborPicker('neighbor-rows', 'neighbor-add-btn', undefined, []);
+
   document.getElementById('new-box-save-btn').addEventListener('click', () => {
     const zone = document.getElementById('new-box-zone').value;
     const name = document.getElementById('new-box-name').value.trim();
-    addBox(zone, name);
+    const neighborIds = neighborPicker.getSelectedIds();
+    const newId = addBox(zone, name);
+    if (neighborIds.length) setBoxNeighbors(newId, neighborIds);
+    saveState();
+    render();
     closeModal();
   });
 }
@@ -223,13 +322,17 @@ function addBox(zone, name) {
   const existingCount = state.boxDefs.filter(b => b.zone === zone).length;
   const id = `${zone}-${Date.now()}`;
   const autoName = zone === 'sol' ? `Soliga ${existingCount + 1}` : `Häcken ${existingCount + 1}`;
-  state.boxDefs.push({ id, zone, name: name || autoName });
+  state.boxDefs.push({ id, zone, name: name || autoName, neighbors: [] });
   saveState();
   render();
+  return id;
 }
 
 function removeBox(boxId) {
   if (!confirm('Ta bort den här lådan? Det här går inte att ångra.')) return;
+  state.boxDefs.forEach(b => {
+    if (b.neighbors) b.neighbors = b.neighbors.filter(id => id !== boxId);
+  });
   state.boxDefs = state.boxDefs.filter(b => b.id !== boxId);
   delete state.boxes[boxId];
   saveState();
@@ -240,8 +343,6 @@ function removeBox(boxId) {
 function openBoxEditor(boxId) {
   const box = state.boxDefs.find(b => b.id === boxId);
   const currentCropId = state.boxes[boxId] || '';
-  const neighborIds = state.boxDefs.filter(b => b.zone === box.zone && b.id !== boxId)
-    .map(b => state.boxes[b.id]).filter(Boolean);
 
   const options = Object.entries(CROPS)
     .sort((a, b) => a[1].name.localeCompare(b[1].name, 'sv'))
@@ -260,6 +361,11 @@ function openBoxEditor(boxId) {
     </div>
     <div id="box-warning-slot"></div>
     <div class="modal-section">
+      <p class="modal-section-title">Vilka lådor ligger den nära?</p>
+      <div id="neighbor-rows"></div>
+      <button type="button" class="chip" id="neighbor-add-btn">+ Lägg till granne</button>
+    </div>
+    <div class="modal-section">
       <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="box-save-btn">Spara</button>
     </div>
     <div class="modal-section">
@@ -272,27 +378,33 @@ function openBoxEditor(boxId) {
 
   const select = document.getElementById('box-crop-select');
   const warningSlot = document.getElementById('box-warning-slot');
+  let neighborPicker; // assigned below; declared first so updateWarning can safely no-op during setup
 
   function updateWarning() {
+    if (!neighborPicker) return;
     const chosen = select.value;
     warningSlot.innerHTML = '';
     if (!chosen) return;
     const crop = CROPS[chosen];
-    const badNeighbors = (crop.companionBad || []).filter(id => neighborIds.includes(id));
+    const neighborCropIds = neighborPicker.getSelectedIds().map(id => state.boxes[id]).filter(Boolean);
+    const badNeighbors = (crop.companionBad || []).filter(id => neighborCropIds.includes(id));
     if (badNeighbors.length > 0) {
-      warningSlot.innerHTML = `<div class="modal-warning">⚠️ ${crop.name} trivs inte bra bredvid ${badNeighbors.map(id => CROP_LABELS[id]).join(', ')}, som redan odlas i en annan låda i samma zon.</div>`;
+      warningSlot.innerHTML = `<div class="modal-warning">⚠️ ${crop.name} trivs inte bra bredvid ${badNeighbors.map(id => CROP_LABELS[id]).join(', ')}, som odlas i en angränsande låda.</div>`;
     } else {
-      const goodNeighbors = (crop.companionGood || []).filter(id => neighborIds.includes(id));
+      const goodNeighbors = (crop.companionGood || []).filter(id => neighborCropIds.includes(id));
       if (goodNeighbors.length > 0) {
-        warningSlot.innerHTML = `<div class="modal-tip">✓ ${crop.name} trivs bra tillsammans med ${goodNeighbors.map(id => CROP_LABELS[id]).join(', ')}, som redan odlas i zonen.</div>`;
+        warningSlot.innerHTML = `<div class="modal-tip">✓ ${crop.name} trivs bra tillsammans med ${goodNeighbors.map(id => CROP_LABELS[id]).join(', ')}, som odlas i en angränsande låda.</div>`;
       }
     }
   }
   select.addEventListener('change', updateWarning);
+
+  neighborPicker = wireNeighborPicker('neighbor-rows', 'neighbor-add-btn', boxId, getBoxNeighbors(boxId), updateWarning);
   updateWarning();
 
   document.getElementById('box-save-btn').addEventListener('click', () => {
     state.boxes[boxId] = select.value || null;
+    setBoxNeighbors(boxId, neighborPicker.getSelectedIds());
     saveState();
     closeModal();
     render();
