@@ -306,6 +306,36 @@ select.crop-picker {
   flex-shrink: 0;
 }
 
+.crop-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.crop-picker-row .crop-row-select { flex: 1; margin-top: 0; }
+.crop-row-name {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--soil);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  padding: 6px 4px;
+}
+.crop-row-edit, .crop-row-remove {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  padding: 6px 8px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.crop-row-remove { color: #922B21; }
+
 .status-pill {
   display: inline-block;
   padding: 3px 9px;

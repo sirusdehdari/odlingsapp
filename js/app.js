@@ -36,6 +36,11 @@ function currentPeriodIndex(date = new Date()) {
 }
 
 const MAX_NEIGHBORS = 8;
+const MAX_CROPS_PER_BOX = 4;
+
+function getBoxCrops(boxId) {
+  return state.boxes[boxId] || [];
+}
 
 function getBoxNeighbors(boxId) {
   const box = state.boxDefs.find(b => b.id === boxId);
@@ -130,6 +135,74 @@ function wireNeighborPicker(rowsContainerId, addBtnId, excludeId, initialIds, on
   return { getSelectedIds: currentSelectedIds };
 }
 
+// Builds and wires up the "vad odlas här" picker: saved crops show as a
+// compact, clickable name + edit/remove icons; only a freshly-added or
+// edited row shows the actual <select>. Up to MAX_CROPS_PER_BOX crops.
+function wireCropPicker(rowsContainerId, addBtnId, initialCropIds, onChange) {
+  const rowsContainer = document.getElementById(rowsContainerId);
+  const addBtn = document.getElementById(addBtnId);
+
+  function currentSelectedIds() {
+    return Array.from(rowsContainer.children).map(row => row.dataset.cropId).filter(Boolean);
+  }
+
+  function refreshAll() {
+    addBtn.style.display = rowsContainer.children.length >= MAX_CROPS_PER_BOX ? 'none' : '';
+    if (onChange) onChange();
+  }
+
+  function renderRowDisplay(row, cropId) {
+    const crop = CROPS[cropId];
+    row.dataset.cropId = cropId;
+    row.innerHTML = `
+      <button type="button" class="crop-row-name">${crop.name}</button>
+      <button type="button" class="crop-row-edit" title="Byt gröda">✎</button>
+      <button type="button" class="crop-row-remove" title="Ta bort">✕</button>
+    `;
+    row.querySelector('.crop-row-name').addEventListener('click', () => openCropModal(cropId));
+    row.querySelector('.crop-row-edit').addEventListener('click', () => renderRowEdit(row, cropId));
+    row.querySelector('.crop-row-remove').addEventListener('click', () => {
+      row.remove();
+      refreshAll();
+    });
+  }
+
+  function renderRowEdit(row, currentCropId) {
+    row.dataset.cropId = '';
+    const selected = currentSelectedIds();
+    const options = Object.entries(CROPS)
+      .filter(([id]) => id === currentCropId || !selected.includes(id))
+      .sort((a, b) => a[1].name.localeCompare(b[1].name, 'sv'))
+      .map(([id, c]) => `<option value="${id}" ${id === currentCropId ? 'selected' : ''}>${c.name}</option>`)
+      .join('');
+    row.innerHTML = `<select class="crop-picker crop-row-select"><option value="">— Välj gröda —</option>${options}</select>`;
+    const select = row.querySelector('select');
+    select.addEventListener('change', () => {
+      if (select.value) {
+        renderRowDisplay(row, select.value);
+        refreshAll();
+      }
+    });
+  }
+
+  function addRow(cropId) {
+    const row = document.createElement('div');
+    row.className = 'crop-picker-row';
+    rowsContainer.appendChild(row);
+    if (cropId) renderRowDisplay(row, cropId);
+    else renderRowEdit(row, '');
+    refreshAll();
+  }
+
+  initialCropIds.forEach(id => addRow(id));
+  addBtn.addEventListener('click', () => {
+    if (rowsContainer.children.length < MAX_CROPS_PER_BOX) addRow('');
+  });
+  refreshAll();
+
+  return { getSelectedIds: currentSelectedIds };
+}
+
 function isModalOpen() {
   return document.getElementById('modal-overlay').classList.contains('open');
 }
@@ -220,7 +293,7 @@ function renderComingSoon(title, text) {
 // ---------- HEM ----------
 
 function renderHem() {
-  const assigned = Object.entries(state.boxes).filter(([, cropId]) => cropId);
+  const assigned = Object.values(state.boxes).filter(cropIds => Array.isArray(cropIds) && cropIds.length > 0);
   const totalBoxes = state.boxDefs.length;
   return `
     <h2>Hem</h2>
@@ -271,13 +344,14 @@ function renderLador() {
 }
 
 function renderBoxTile(box) {
-  const cropId = state.boxes[box.id];
-  const crop = cropId ? CROPS[cropId] : null;
-  const status = crop ? crop.perioder[currentPeriodIndex()] : null;
+  const cropIds = getBoxCrops(box.id);
+  const firstCrop = cropIds[0] ? CROPS[cropIds[0]] : null;
+  const status = firstCrop ? firstCrop.perioder[currentPeriodIndex()] : null;
+  const extra = cropIds.length > 1 ? ` +${cropIds.length - 1} till` : '';
   return `
     <button class="box-tile zone-${box.zone}" data-box="${box.id}">
       <div class="box-name">${box.name}</div>
-      <div class="box-crop ${crop ? '' : 'empty'}">${crop ? crop.name : 'Tom'}</div>
+      <div class="box-crop ${firstCrop ? '' : 'empty'}">${firstCrop ? firstCrop.name + extra : 'Tom'}</div>
       ${status ? `<div class="status-pill ${status.cls}">${status.label}</div>` : ''}
     </button>
   `;
@@ -349,22 +423,14 @@ function removeBox(boxId) {
 
 function openBoxEditor(boxId) {
   const box = state.boxDefs.find(b => b.id === boxId);
-  const currentCropId = state.boxes[boxId] || '';
-
-  const options = Object.entries(CROPS)
-    .sort((a, b) => a[1].name.localeCompare(b[1].name, 'sv'))
-    .map(([id, c]) => `<option value="${id}" ${id === currentCropId ? 'selected' : ''}>${c.name}</option>`)
-    .join('');
 
   const html = `
     <p class="modal-title">${box.name}</p>
     <p class="modal-sub">${box.zone === 'sol' ? '☀️ Sol hela dagen' : '🌓 Skugga till förmiddag'}</p>
     <div class="modal-section">
       <p class="modal-section-title">Vad odlas här?</p>
-      <select class="crop-picker" id="box-crop-select">
-        <option value="">— Tom / inget vald —</option>
-        ${options}
-      </select>
+      <div id="crop-rows"></div>
+      <button type="button" class="chip" id="crop-add-btn">+ Lägg till gröda</button>
     </div>
     <div id="box-warning-slot"></div>
     <div class="modal-section">
@@ -383,34 +449,52 @@ function openBoxEditor(boxId) {
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 
-  const select = document.getElementById('box-crop-select');
   const warningSlot = document.getElementById('box-warning-slot');
-  let neighborPicker; // assigned below; declared first so updateWarning can safely no-op during setup
+  // declared first so the shared updateWarning callback can safely no-op while both pickers are still being built
+  let cropPicker, neighborPicker;
 
   function updateWarning() {
-    if (!neighborPicker) return;
-    const chosen = select.value;
-    warningSlot.innerHTML = '';
-    if (!chosen) return;
-    const crop = CROPS[chosen];
-    const neighborCropIds = neighborPicker.getSelectedIds().map(id => state.boxes[id]).filter(Boolean);
-    const badNeighbors = (crop.companionBad || []).filter(id => neighborCropIds.includes(id));
-    if (badNeighbors.length > 0) {
-      warningSlot.innerHTML = `<div class="modal-warning">⚠️ ${crop.name} trivs inte bra bredvid ${badNeighbors.map(id => CROP_LABELS[id]).join(', ')}, som odlas i en angränsande låda.</div>`;
-    } else {
-      const goodNeighbors = (crop.companionGood || []).filter(id => neighborCropIds.includes(id));
-      if (goodNeighbors.length > 0) {
-        warningSlot.innerHTML = `<div class="modal-tip">✓ ${crop.name} trivs bra tillsammans med ${goodNeighbors.map(id => CROP_LABELS[id]).join(', ')}, som odlas i en angränsande låda.</div>`;
+    if (!cropPicker || !neighborPicker) return;
+    const ownCropIds = cropPicker.getSelectedIds();
+    const neighborCropIds = neighborPicker.getSelectedIds().flatMap(getBoxCrops);
+    const warnings = [];
+    const tips = [];
+
+    const fillers = ownCropIds.filter(id => CROPS[id].fillsBox);
+    if (fillers.length && ownCropIds.length > fillers.length) {
+      warnings.push(`${fillers.map(id => CROP_LABELS[id]).join(' och ')} tar upp en hel låda på egen hand – de andra grödorna du valt får troligen inte plats.`);
+    } else if (fillers.length > 1) {
+      warnings.push(`${fillers.map(id => CROP_LABELS[id]).join(' och ')} tar båda upp en hel låda var för sig – de får inte plats tillsammans.`);
+    }
+
+    for (let i = 0; i < ownCropIds.length; i++) {
+      for (let j = i + 1; j < ownCropIds.length; j++) {
+        const cropI = CROPS[ownCropIds[i]], cropJ = CROPS[ownCropIds[j]];
+        if ((cropI.companionBad || []).includes(ownCropIds[j]) || (cropJ.companionBad || []).includes(ownCropIds[i])) {
+          warnings.push(`${cropI.name} och ${cropJ.name} trivs inte bra ihop i samma låda.`);
+        }
       }
     }
-  }
-  select.addEventListener('change', updateWarning);
 
+    ownCropIds.forEach(ownId => {
+      const crop = CROPS[ownId];
+      (crop.companionBad || []).filter(id => neighborCropIds.includes(id))
+        .forEach(badId => warnings.push(`${crop.name} trivs inte bra bredvid ${CROP_LABELS[badId]}, som odlas i en angränsande låda.`));
+      (crop.companionGood || []).filter(id => neighborCropIds.includes(id))
+        .forEach(goodId => tips.push(`${crop.name} trivs bra tillsammans med ${CROP_LABELS[goodId]}, som odlas i en angränsande låda.`));
+    });
+
+    warningSlot.innerHTML =
+      warnings.map(w => `<div class="modal-warning">⚠️ ${w}</div>`).join('') +
+      tips.map(t => `<div class="modal-tip">✓ ${t}</div>`).join('');
+  }
+
+  cropPicker = wireCropPicker('crop-rows', 'crop-add-btn', getBoxCrops(boxId), updateWarning);
   neighborPicker = wireNeighborPicker('neighbor-rows', 'neighbor-add-btn', boxId, getBoxNeighbors(boxId), updateWarning);
   updateWarning();
 
   document.getElementById('box-save-btn').addEventListener('click', () => {
-    state.boxes[boxId] = select.value || null;
+    state.boxes[boxId] = cropPicker.getSelectedIds();
     setBoxNeighbors(boxId, neighborPicker.getSelectedIds());
     saveState();
     closeModal();
@@ -422,15 +506,17 @@ function openBoxEditor(boxId) {
 
 // ---------- GRÖDOR ----------
 
-let cropFilter = { zone: 'alla', maintenance: 'alla' };
+let cropFilter = { zone: 'alla', maintenance: 'alla', aktuellNu: false };
 let grodorMode = { view: 'lista', schemaZone: 'skugga' };
 
 function renderGrodor() {
   if (grodorMode.view === 'schema') return renderGrodorSchema();
 
+  const periodIdx = currentPeriodIndex();
   const entries = Object.entries(CROPS)
     .filter(([, c]) => cropFilter.zone === 'alla' || c.zone === cropFilter.zone)
     .filter(([, c]) => cropFilter.maintenance === 'alla' || c.maintenance === cropFilter.maintenance)
+    .filter(([, c]) => !cropFilter.aktuellNu || c.perioder[periodIdx].cls !== 'vila')
     .sort((a, b) => a[1].name.localeCompare(b[1].name, 'sv'));
 
   return `
@@ -438,6 +524,9 @@ function renderGrodor() {
     <div class="schema-toggle">
       <button class="chip active" id="mode-lista-btn">Lista</button>
       <button class="chip" id="mode-schema-btn">📅 Visa som schema</button>
+    </div>
+    <div class="filter-bar">
+      <button class="chip ${cropFilter.aktuellNu ? 'active' : ''}" id="aktuell-nu-btn">📍 Aktuellt nu</button>
     </div>
     <div class="filter-bar">
       ${chip('zone', 'alla', 'Alla zoner')}
@@ -450,18 +539,22 @@ function renderGrodor() {
       ${chip('maintenance', 'medel', '🟡 Medel')}
       ${chip('maintenance', 'krav', '🔴 Kräver omsorg')}
     </div>
-    ${entries.map(([id, c]) => `
+    ${entries.map(([id, c]) => {
+      const status = c.perioder[periodIdx];
+      return `
       <button class="crop-row" data-crop="${id}">
         <div class="crop-main">
           <div class="crop-name">${c.name}</div>
           <div class="crop-sub">${c.sub}</div>
+          <div class="status-pill ${status.cls}" style="margin-top:5px">${status.label}</div>
         </div>
         <div class="badges">
           <span class="badge" title="${MAINT_LABEL[c.maintenance]}">${MAINT_ICON[c.maintenance]}</span>
           <span class="badge" title="${ZONE_LABEL[c.zone]}">${ZONE_ICON[c.zone]}</span>
         </div>
       </button>
-    `).join('') || '<div class="empty-state">Inga grödor matchar filtret.</div>'}
+    `;
+    }).join('') || '<div class="empty-state">Inga grödor matchar filtret.</div>'}
   `;
 }
 
@@ -555,6 +648,12 @@ function openCropModal(id) {
       ${c.companionBad?.length ? `<p>Undvik nära: ${c.companionBad.map(id => CROP_LABELS[id] || id).join(', ')}</p>` : ''}
     </div>` : ''}
 
+    ${c.skadedjur ? `
+    <div class="modal-section">
+      <p class="modal-section-title">🐦🦌 Skadedjur & skydd</p>
+      <p>${c.skadedjur}</p>
+    </div>` : ''}
+
     <div class="modal-tip">💡 ${c.tips}</div>
   `;
   document.getElementById('modal-content').innerHTML = html;
@@ -569,6 +668,7 @@ function renderBarbuskar() {
   return `
     <h2>Bärbuskar</h2>
     <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px">Fristående guide – dessa kopplas inte till någon odlingslåda.</p>
+    <div class="modal-tip" style="margin-bottom:16px">🦌 ${DEER_GENERAL_TIP}</div>
     ${entries.map(([id, b]) => `
       <button class="crop-row" data-berry="${id}">
         <div class="crop-main">
@@ -600,6 +700,11 @@ function openBerryModal(id) {
       <p class="modal-section-title">🧺 Skörd</p>
       <p>${b.skörd}</p>
     </div>
+    ${b.skadedjur ? `
+    <div class="modal-section">
+      <p class="modal-section-title">🐦🦌 Skadedjur & skydd</p>
+      <p>${b.skadedjur}</p>
+    </div>` : ''}
     <div class="modal-tip">💡 ${b.tips}</div>
   `;
   document.getElementById('modal-content').innerHTML = html;
@@ -634,6 +739,9 @@ function attachViewHandlers() {
       render();
     });
   });
+
+  const aktuellNuBtn = document.getElementById('aktuell-nu-btn');
+  if (aktuellNuBtn) aktuellNuBtn.addEventListener('click', () => { cropFilter.aktuellNu = !cropFilter.aktuellNu; render(); });
 
   const modeListaBtn = document.getElementById('mode-lista-btn');
   const modeSchemaBtn = document.getElementById('mode-schema-btn');

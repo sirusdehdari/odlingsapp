@@ -90,7 +90,8 @@ const CROPS = {
     skotsel: ['Vattna regelbundet, extra viktigt vid blomning.', 'Ingen gödning – fixerar eget kväve.', 'Se till att stöd finns tidigt.'],
     skörd: 'Skörda löpande när baljorna är fyllda men fortfarande gröna och krispiga.',
     tips: 'Tidig sådd i april ger kraftiga plantor.',
-    companionGood: ['morotter', 'radisor'], companionBad: ['lok', 'vitlok']
+    companionGood: ['morotter', 'radisor'], companionBad: ['lok', 'vitlok'],
+    skadedjur: 'Rådjur äter gärna unga skott och blad – extra utsatt tidigt på säsongen innan plantan hunnit bli kraftig. Ett enkelt nät eller staket runt lådan under uppstartsfasen hjälper mycket.'
   },
 
   bondbona: {
@@ -106,7 +107,8 @@ const CROPS = {
     skotsel: ['Torktålig – vattna när ytan torkat.', 'Ingen gödning behövs.', 'Nyp av toppskotten när första baljorna syns (frivilligt, hämmar bladlöss).'],
     skörd: 'Skörda baljorna när fyllda men ännu mjuka, innan de gulnar.',
     tips: 'Massor av svarta bladlöss på topparna? Nyp bort toppskotten.',
-    companionGood: ['potatis'], companionBad: ['lok', 'vitlok']
+    companionGood: ['potatis'], companionBad: ['lok', 'vitlok'],
+    skadedjur: 'Rådjur tycker om unga bondbönsplantor. Skydda med nät tills plantorna är stadiga och lite kraftigare.'
   },
 
   pakchoi: {
@@ -153,7 +155,8 @@ const CROPS = {
     skotsel: ['Vattna regelbundet.', 'Gödsla lätt en gång i månaden.', 'Sätt upp insektsnät mot kålfjärilar direkt vid plantering (engångsåtgärd, inte löpande skötsel).'],
     skörd: 'Plocka nedre bladen löpande. Smakar som bäst efter första frosten.',
     tips: 'En av de mest näringstäta grödorna du kan odla – och den blir godare av kyla.',
-    companionGood: ['dill'], companionBad: ['jordgubbar', 'tomat']
+    companionGood: ['dill'], companionBad: ['jordgubbar', 'tomat'],
+    skadedjur: 'Rådjur äter gärna kålblad om de kommer åt. Ett nät eller staket runt lådan är det mest pålitliga skyddet.'
   },
 
   mangold: {
@@ -305,7 +308,8 @@ const CROPS = {
     skotsel: ['Vattna rikligt och jämnt.', 'Gödsla en gång i månaden.', 'Sätt upp insektsnät mot kålfjärilar direkt vid plantering (engångsåtgärd).'],
     skörd: 'Skörda när huvudet känns fast och tungt, ofta september–oktober. Lagrar i veckor till månader svalt.',
     tips: 'Kräver mer plats än de flesta grödor men lönar sig i lagringsvärde.',
-    companionGood: ['dill'], companionBad: ['jordgubbar', 'tomat']
+    companionGood: ['dill'], companionBad: ['jordgubbar', 'tomat'],
+    skadedjur: 'Rådjur är mycket förtjusta i kål. Ett nät eller staket runt lådan rekommenderas starkt om du har rådjur i närheten.'
   },
 
   tomat: {
@@ -355,7 +359,7 @@ const CROPS = {
 
   squash: {
     name: 'Squash / Sommarsquash', sub: 'Låg kalori · Fibrer · B-vitamin · Kalium',
-    zone: 'sol', maintenance: 'medel',
+    zone: 'sol', maintenance: 'medel', fillsBox: true,
     perioder: [
       { cls: 'vila', label: 'Vila' }, { cls: 'plantera', label: 'Plantera ut' },
       { cls: 'vårda-skörda', label: 'Vårda + skörda' }, { cls: 'skörda', label: 'Skörda' },
