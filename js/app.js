@@ -516,7 +516,7 @@ function renderGrodor() {
   const entries = Object.entries(CROPS)
     .filter(([, c]) => cropFilter.zone === 'alla' || c.zone === cropFilter.zone)
     .filter(([, c]) => cropFilter.maintenance === 'alla' || c.maintenance === cropFilter.maintenance)
-    .filter(([, c]) => !cropFilter.aktuellNu || c.perioder[periodIdx].cls !== 'vila')
+    .filter(([, c]) => !cropFilter.aktuellNu || ['så', 'så-skörda', 'plantera'].includes(c.perioder[periodIdx].cls))
     .sort((a, b) => a[1].name.localeCompare(b[1].name, 'sv'));
 
   return `
@@ -526,7 +526,7 @@ function renderGrodor() {
       <button class="chip" id="mode-schema-btn">📅 Visa som schema</button>
     </div>
     <div class="filter-bar">
-      <button class="chip ${cropFilter.aktuellNu ? 'active' : ''}" id="aktuell-nu-btn">📍 Aktuellt nu</button>
+      <button class="chip ${cropFilter.aktuellNu ? 'active' : ''}" id="aktuell-nu-btn">🌱 Så/plantera nu</button>
     </div>
     <div class="filter-bar">
       ${chip('zone', 'alla', 'Alla zoner')}
