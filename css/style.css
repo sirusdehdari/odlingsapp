@@ -266,6 +266,7 @@ select.crop-picker {
 .så-skörda { background: linear-gradient(135deg, #D6EDCA 50%, #FCDDB8 50%); color: var(--ink); }
 .plantera-vårda { background: linear-gradient(135deg, #C8E6C9 50%, #FFF3CD 50%); color: var(--ink); }
 .vårda-skörda { background: linear-gradient(135deg, #FFF3CD 50%, #FCDDB8 50%); color: var(--ink); }
+.overdue { background: #FDDCDC; color: #922B21; }
 
 .month-strip {
   display: grid;
@@ -310,11 +311,12 @@ select.crop-picker {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
 }
-.crop-picker-row .crop-row-select { flex: 1; margin-top: 0; }
+.crop-picker-row .crop-row-select { flex: 1 1 140px; margin-top: 0; }
+.crop-row-main { flex: 1; min-width: 0; }
 .crop-row-name {
-  flex: 1;
   text-align: left;
   background: none;
   border: none;
@@ -324,7 +326,31 @@ select.crop-picker {
   color: var(--soil);
   text-decoration: underline;
   text-decoration-color: var(--border);
-  padding: 6px 4px;
+  padding: 4px 0;
+  display: block;
+}
+.crop-row-meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+  padding: 0 4px;
+}
+.crop-row-date {
+  flex: 1 1 120px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  background: white;
+}
+.crop-row-confirm {
+  background: var(--moss);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  flex-shrink: 0;
 }
 .crop-row-edit, .crop-row-remove {
   background: none;

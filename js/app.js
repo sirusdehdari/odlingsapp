@@ -12,10 +12,26 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.boxDefs) return parsed;
+      if (parsed.boxDefs) return normalizeBoxes(parsed);
     }
   } catch (e) { /* fall through to defaults */ }
   return { boxDefs: JSON.parse(JSON.stringify(BOX_CONFIG)), boxes: {} };
+}
+
+// Older saves stored each box's crops as plain id strings (no planting date).
+// Upgrade those in place to {cropId, plantedDate} objects, leaving already-
+// upgraded entries untouched. plantedDate is left null when unknown - the
+// user can set it via the edit (✎) icon.
+function normalizeBoxes(state) {
+  Object.keys(state.boxes).forEach(boxId => {
+    const val = state.boxes[boxId];
+    if (Array.isArray(val)) {
+      state.boxes[boxId] = val.map(entry =>
+        typeof entry === 'string' ? { cropId: entry, plantedDate: null } : entry
+      );
+    }
+  });
+  return state;
 }
 
 function saveState() {
@@ -40,6 +56,73 @@ const MAX_CROPS_PER_BOX = 4;
 
 function getBoxCrops(boxId) {
   return state.boxes[boxId] || [];
+}
+
+const MONTH_SHORT_SV = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+function formatDateSv(date) {
+  return `${date.getDate()} ${MONTH_SHORT_SV[date.getMonth()]}`;
+}
+
+function parseDate(dateStr) {
+  return new Date(dateStr + 'T00:00:00');
+}
+
+function daysBetween(d1, d2) {
+  const utc1 = Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate());
+  const utc2 = Date.UTC(d2.getFullYear(), d2.getMonth(), d2.getDate());
+  return Math.round((utc2 - utc1) / 86400000);
+}
+
+// [month(0-indexed), day] of the last day of each perioder slot (matches MONTH_LABELS).
+const PERIOD_END_MONTH_DAY = [[4, 31], [5, 30], [6, 31], [7, 31], [9, 31], [2, 31]];
+
+// End date of the perioder slot that `referenceDate` falls into. The Nov–Mar
+// slot (index 5) ends the following calendar year when referenceDate is in
+// Nov/Dec, and the same year when referenceDate is already in Jan/Feb/Mar.
+function periodEndDate(periodIdx, referenceDate) {
+  const [month, day] = PERIOD_END_MONTH_DAY[periodIdx];
+  let year = referenceDate.getFullYear();
+  if (periodIdx === 5 && referenceDate.getMonth() >= 10) year += 1;
+  return new Date(year, month, day);
+}
+
+const SOW_LATE_WARNING_DAYS = 10;
+
+// Warns when a crop was sown close to the end of its recommended sowing
+// window - only fires for periods actually labeled as a sowing action.
+function checkSowingLateness(crop, plantedDateStr) {
+  if (!plantedDateStr) return null;
+  const plantedDate = parseDate(plantedDateStr);
+  const idx = currentPeriodIndex(plantedDate);
+  const status = crop.perioder[idx];
+  if (!['så', 'så-skörda'].includes(status.cls)) return null;
+  const daysLeft = daysBetween(plantedDate, periodEndDate(idx, plantedDate));
+  if (daysLeft >= 0 && daysLeft < SOW_LATE_WARNING_DAYS) {
+    return `${crop.name} såddes ${formatDateSv(plantedDate)}, bara ${daysLeft} dagar innan såperioden tar slut – kan vara i senaste laget.`;
+  }
+  return null;
+}
+
+// Shade boxes get less light, so growth is assumed to take somewhat longer.
+// A flat buffer rather than a precise per-crop figure, since real variation
+// (weather, soil, microclimate) swamps any precision finer than this anyway.
+const SHADE_GROWTH_BUFFER = 1.15;
+
+// Where a planting stands relative to its approximate germinate/harvest
+// windows. Ranges, not exact predictions - real growth time varies a lot.
+function computeStage(crop, plantedDateStr, boxZone) {
+  if (!plantedDateStr || !crop.growth) return null;
+  const daysSince = daysBetween(parseDate(plantedDateStr), new Date());
+  const buffer = boxZone === 'skugga' ? SHADE_GROWTH_BUFFER : 1;
+  const g = crop.growth;
+  if (g.germinateDays && daysSince < g.germinateDays[0] * buffer) {
+    return { label: 'Gror', cls: 'så' };
+  }
+  const harvestMin = g.harvestDays[0] * buffer;
+  const harvestMax = g.harvestDays[1] * buffer;
+  if (daysSince < harvestMin) return { label: 'Växer', cls: 'vårda' };
+  if (daysSince <= harvestMax) return { label: 'Redo att skörda', cls: 'skörda' };
+  return { label: 'Försenad – kolla den', cls: 'overdue' };
 }
 
 function getBoxNeighbors(boxId) {
@@ -135,15 +218,20 @@ function wireNeighborPicker(rowsContainerId, addBtnId, excludeId, initialIds, on
   return { getSelectedIds: currentSelectedIds };
 }
 
-// Builds and wires up the "vad odlas här" picker: saved crops show as a
-// compact, clickable name + edit/remove icons; only a freshly-added or
-// edited row shows the actual <select>. Up to MAX_CROPS_PER_BOX crops.
-function wireCropPicker(rowsContainerId, addBtnId, initialCropIds, onChange) {
+// Builds and wires up the "vad odlas här" picker. Saved crops show as a
+// compact line (name + planting date + growth stage) with edit/remove
+// icons; only a freshly-added or edited row shows the crop <select> +
+// date input pair, confirmed with a ✓ button (two fields need to be set
+// together, so there's no single "change" event to auto-commit on).
+// Up to MAX_CROPS_PER_BOX crops. boxZone feeds the stage estimate.
+function wireCropPicker(rowsContainerId, addBtnId, initialEntries, boxZone, onChange) {
   const rowsContainer = document.getElementById(rowsContainerId);
   const addBtn = document.getElementById(addBtnId);
 
-  function currentSelectedIds() {
-    return Array.from(rowsContainer.children).map(row => row.dataset.cropId).filter(Boolean);
+  function currentEntries() {
+    return Array.from(rowsContainer.children)
+      .filter(row => row.dataset.cropId)
+      .map(row => ({ cropId: row.dataset.cropId, plantedDate: row.dataset.plantedDate || null }));
   }
 
   function refreshAll() {
@@ -151,56 +239,67 @@ function wireCropPicker(rowsContainerId, addBtnId, initialCropIds, onChange) {
     if (onChange) onChange();
   }
 
-  function renderRowDisplay(row, cropId) {
+  function renderRowDisplay(row, cropId, plantedDate) {
     const crop = CROPS[cropId];
     row.dataset.cropId = cropId;
+    row.dataset.plantedDate = plantedDate || '';
+    const stage = computeStage(crop, plantedDate, boxZone);
+    const dateLabel = plantedDate ? `Planterad ${formatDateSv(parseDate(plantedDate))}` : 'Inget datum registrerat';
     row.innerHTML = `
-      <button type="button" class="crop-row-name">${crop.name}</button>
-      <button type="button" class="crop-row-edit" title="Byt gröda">✎</button>
+      <div class="crop-row-main">
+        <button type="button" class="crop-row-name">${crop.name}</button>
+        <div class="crop-row-meta">${dateLabel}${stage ? ` · <span class="status-pill ${stage.cls}">${stage.label}</span>` : ''}</div>
+      </div>
+      <button type="button" class="crop-row-edit" title="Ändra">✎</button>
       <button type="button" class="crop-row-remove" title="Ta bort">✕</button>
     `;
     row.querySelector('.crop-row-name').addEventListener('click', () => openCropModal(cropId));
-    row.querySelector('.crop-row-edit').addEventListener('click', () => renderRowEdit(row, cropId));
+    row.querySelector('.crop-row-edit').addEventListener('click', () => renderRowEdit(row, cropId, plantedDate));
     row.querySelector('.crop-row-remove').addEventListener('click', () => {
       row.remove();
       refreshAll();
     });
   }
 
-  function renderRowEdit(row, currentCropId) {
+  function renderRowEdit(row, currentCropId, currentPlantedDate) {
     row.dataset.cropId = '';
-    const selected = currentSelectedIds();
+    const selected = currentEntries().map(e => e.cropId);
     const options = Object.entries(CROPS)
       .filter(([id]) => id === currentCropId || !selected.includes(id))
       .sort((a, b) => a[1].name.localeCompare(b[1].name, 'sv'))
       .map(([id, c]) => `<option value="${id}" ${id === currentCropId ? 'selected' : ''}>${c.name}</option>`)
       .join('');
-    row.innerHTML = `<select class="crop-picker crop-row-select"><option value="">— Välj gröda —</option>${options}</select>`;
-    const select = row.querySelector('select');
-    select.addEventListener('change', () => {
-      if (select.value) {
-        renderRowDisplay(row, select.value);
-        refreshAll();
-      }
+    const dateVal = currentPlantedDate || todayStr();
+    row.innerHTML = `
+      <select class="crop-picker crop-row-select"><option value="">— Välj gröda —</option>${options}</select>
+      <input type="date" class="crop-row-date" value="${dateVal}">
+      <button type="button" class="crop-row-confirm" title="Klar">✓</button>
+    `;
+    row.querySelector('.crop-row-confirm').addEventListener('click', () => {
+      const cropId = row.querySelector('.crop-row-select').value;
+      const dateVal2 = row.querySelector('.crop-row-date').value;
+      if (!cropId) { row.remove(); refreshAll(); return; }
+      renderRowDisplay(row, cropId, dateVal2 || todayStr());
+      refreshAll();
     });
   }
 
-  function addRow(cropId) {
+  function addRow(entry) {
     const row = document.createElement('div');
     row.className = 'crop-picker-row';
     rowsContainer.appendChild(row);
-    if (cropId) renderRowDisplay(row, cropId);
-    else renderRowEdit(row, '');
+    if (entry && entry.cropId) renderRowDisplay(row, entry.cropId, entry.plantedDate);
+    else renderRowEdit(row, '', '');
     refreshAll();
   }
 
-  initialCropIds.forEach(id => addRow(id));
+  initialEntries.forEach(addRow);
   addBtn.addEventListener('click', () => {
-    if (rowsContainer.children.length < MAX_CROPS_PER_BOX) addRow('');
+    if (rowsContainer.children.length < MAX_CROPS_PER_BOX) addRow(null);
   });
   refreshAll();
 
-  return { getSelectedIds: currentSelectedIds };
+  return { getSelectedIds: currentEntries };
 }
 
 function isModalOpen() {
@@ -250,7 +349,7 @@ function importDataFile(file) {
     try {
       const parsed = JSON.parse(reader.result);
       if (!parsed.boxDefs || !parsed.boxes) throw new Error('Ogiltigt format');
-      state = parsed;
+      state = normalizeBoxes(parsed);
       saveState();
       render();
       alert('Data återställd!');
@@ -344,10 +443,10 @@ function renderLador() {
 }
 
 function renderBoxTile(box) {
-  const cropIds = getBoxCrops(box.id);
-  const firstCrop = cropIds[0] ? CROPS[cropIds[0]] : null;
+  const cropEntries = getBoxCrops(box.id);
+  const firstCrop = cropEntries[0] ? CROPS[cropEntries[0].cropId] : null;
   const status = firstCrop ? firstCrop.perioder[currentPeriodIndex()] : null;
-  const extra = cropIds.length > 1 ? ` +${cropIds.length - 1} till` : '';
+  const extra = cropEntries.length > 1 ? ` +${cropEntries.length - 1} till` : '';
   return `
     <button class="box-tile zone-${box.zone}" data-box="${box.id}">
       <div class="box-name">${box.name}</div>
@@ -455,8 +554,9 @@ function openBoxEditor(boxId) {
 
   function updateWarning() {
     if (!cropPicker || !neighborPicker) return;
-    const ownCropIds = cropPicker.getSelectedIds();
-    const neighborCropIds = neighborPicker.getSelectedIds().flatMap(getBoxCrops);
+    const ownEntries = cropPicker.getSelectedIds();
+    const ownCropIds = ownEntries.map(e => e.cropId);
+    const neighborCropIds = neighborPicker.getSelectedIds().flatMap(id => getBoxCrops(id).map(e => e.cropId));
     const warnings = [];
     const tips = [];
 
@@ -484,12 +584,17 @@ function openBoxEditor(boxId) {
         .forEach(goodId => tips.push(`${crop.name} trivs bra tillsammans med ${CROP_LABELS[goodId]}, som odlas i en angränsande låda.`));
     });
 
+    ownEntries.forEach(entry => {
+      const lateWarning = checkSowingLateness(CROPS[entry.cropId], entry.plantedDate);
+      if (lateWarning) warnings.push(lateWarning);
+    });
+
     warningSlot.innerHTML =
       warnings.map(w => `<div class="modal-warning">⚠️ ${w}</div>`).join('') +
       tips.map(t => `<div class="modal-tip">✓ ${t}</div>`).join('');
   }
 
-  cropPicker = wireCropPicker('crop-rows', 'crop-add-btn', getBoxCrops(boxId), updateWarning);
+  cropPicker = wireCropPicker('crop-rows', 'crop-add-btn', getBoxCrops(boxId), box.zone, updateWarning);
   neighborPicker = wireNeighborPicker('neighbor-rows', 'neighbor-add-btn', boxId, getBoxNeighbors(boxId), updateWarning);
   updateWarning();
 
