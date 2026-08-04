@@ -18,20 +18,29 @@ function loadState() {
   return { boxDefs: JSON.parse(JSON.stringify(BOX_CONFIG)), boxes: {} };
 }
 
-// Older saves stored each box's crops as plain id strings (no planting date).
-// Upgrade those in place to {cropId, plantedDate} objects, leaving already-
-// upgraded entries untouched. plantedDate is left null when unknown - the
-// user can set it via the edit (✎) icon.
+// Older saves stored each box's crops as a plain array (either raw id
+// strings, or {cropId, plantedDate} objects with no history/active split).
+// Upgrade those in place to {active: [...], history: [...]}, leaving
+// already-upgraded entries untouched. plantedDate is left null when
+// unknown - the user can set it via the edit (✎) icon.
 function normalizeBoxes(state) {
   Object.keys(state.boxes).forEach(boxId => {
-    const val = state.boxes[boxId];
+    let val = state.boxes[boxId];
     if (Array.isArray(val)) {
-      state.boxes[boxId] = val.map(entry =>
+      val = { active: val.map(entry =>
         typeof entry === 'string' ? { cropId: entry, plantedDate: null } : entry
-      );
+      ), history: [] };
     }
+    if (!val.active) val.active = [];
+    if (!val.history) val.history = [];
+    state.boxes[boxId] = val;
   });
   return state;
+}
+
+function ensureBoxEntry(boxId) {
+  if (!state.boxes[boxId]) state.boxes[boxId] = { active: [], history: [] };
+  return state.boxes[boxId];
 }
 
 function saveState() {
@@ -55,7 +64,64 @@ const MAX_NEIGHBORS = 8;
 const MAX_CROPS_PER_BOX = 4;
 
 function getBoxCrops(boxId) {
-  return state.boxes[boxId] || [];
+  return (state.boxes[boxId] && state.boxes[boxId].active) || [];
+}
+
+function getBoxHistory(boxId) {
+  return (state.boxes[boxId] && state.boxes[boxId].history) || [];
+}
+
+const FAMILY_LABEL = {
+  kal: 'Kålväxter', lok: 'Lökväxter', baljvaxt: 'Baljväxter',
+  nattskatta: 'Potatis-/nattskatteväxter', gurkvaxt: 'Gurkväxter',
+  flockblommig: 'Flockblommiga växter', korgblommig: 'Korgblommiga växter',
+  spenatvaxt: 'Spenatväxter', kransblommig: 'Kransblommiga växter (mynta-familjen)'
+};
+const FEEDER_LABEL = {
+  heavy: '🔴 Tär mycket på jorden – behöver återhämtning innan samma familj planteras igen på samma ställe.',
+  light: '🟡 Tär måttligt på jorden.',
+  builder: '🟢 Bygger upp jorden (kvävefixerande) – bra föregångare till näringskrävande grödor.'
+};
+
+// How good a candidate crop is as a follow-up to whatever a box's soil just
+// grew, based on plant family (avoid repeating) and feeder type (heavy
+// feeders want to be followed by something gentler or soil-building).
+// Companion-planting data is deliberately not reused here - that's about
+// what grows well *alongside* something, not what should follow it later.
+const FEEDER_FOLLOWUP_SCORE = {
+  builder: { heavy: 2, light: 1, builder: 0 },
+  heavy: { builder: 2, light: 1, heavy: -1 },
+  light: { builder: 1, heavy: 0, light: 0 }
+};
+const ROTATION_RECOMMEND_THRESHOLD = 2;
+const MAX_ROTATION_RECOMMENDATIONS = 3;
+
+function rotationScore(prevCrop, candidate) {
+  if (candidate.family && prevCrop.family && candidate.family === prevCrop.family) return -99;
+  const table = FEEDER_FOLLOWUP_SCORE[prevCrop.feederType] || {};
+  return table[candidate.feederType] ?? 0;
+}
+
+// Only returns crops that are meaningfully better than "grow whatever" -
+// if nothing clears the bar, returns an empty list rather than padding it
+// out with lukewarm options.
+function computeRecommendations(boxId) {
+  const box = state.boxDefs.find(b => b.id === boxId);
+  const history = getBoxHistory(boxId);
+  if (!box || !history.length) return [];
+  const prevCrop = CROPS[history[history.length - 1].cropId];
+  if (!prevCrop) return [];
+
+  const scored = Object.entries(CROPS)
+    .filter(([id]) => id !== history[history.length - 1].cropId)
+    .filter(([, c]) => c.zone === box.zone || c.zone === 'valfri')
+    .map(([id, c]) => ({ id, crop: c, score: rotationScore(prevCrop, c) }))
+    .filter(s => s.score >= ROTATION_RECOMMEND_THRESHOLD)
+    .sort((a, b) => b.score - a.score || a.crop.name.localeCompare(b.crop.name, 'sv'));
+
+  if (!scored.length) return [];
+  const topScore = scored[0].score;
+  return scored.filter(s => s.score === topScore).slice(0, MAX_ROTATION_RECOMMENDATIONS);
 }
 
 const MONTH_SHORT_SV = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
@@ -219,12 +285,15 @@ function wireNeighborPicker(rowsContainerId, addBtnId, excludeId, initialIds, on
 }
 
 // Builds and wires up the "vad odlas här" picker. Saved crops show as a
-// compact line (name + planting date + growth stage) with edit/remove
-// icons; only a freshly-added or edited row shows the crop <select> +
+// compact line (name + planting date + growth stage) with harvest/edit/
+// remove icons; only a freshly-added or edited row shows the crop <select> +
 // date input pair, confirmed with a ✓ button (two fields need to be set
 // together, so there's no single "change" event to auto-commit on).
 // Up to MAX_CROPS_PER_BOX crops. boxZone feeds the stage estimate.
-function wireCropPicker(rowsContainerId, addBtnId, initialEntries, boxZone, onChange) {
+// Harvesting is immediate (not deferred to the outer Spara button): it
+// writes straight to state.boxes[boxId].history so a click can't be lost
+// if the modal is closed without saving.
+function wireCropPicker(rowsContainerId, addBtnId, boxId, initialEntries, boxZone, onChange) {
   const rowsContainer = document.getElementById(rowsContainerId);
   const addBtn = document.getElementById(addBtnId);
 
@@ -250,12 +319,24 @@ function wireCropPicker(rowsContainerId, addBtnId, initialEntries, boxZone, onCh
         <button type="button" class="crop-row-name">${crop.name}</button>
         <div class="crop-row-meta">${dateLabel}${stage ? ` · <span class="status-pill ${stage.cls}">${stage.label}</span>` : ''}</div>
       </div>
+      <button type="button" class="crop-row-harvest" title="Markera som skördad">🧺</button>
       <button type="button" class="crop-row-edit" title="Ändra">✎</button>
       <button type="button" class="crop-row-remove" title="Ta bort">✕</button>
     `;
     row.querySelector('.crop-row-name').addEventListener('click', () => openCropModal(cropId));
     row.querySelector('.crop-row-edit').addEventListener('click', () => renderRowEdit(row, cropId, plantedDate));
     row.querySelector('.crop-row-remove').addEventListener('click', () => {
+      row.remove();
+      refreshAll();
+    });
+    row.querySelector('.crop-row-harvest').addEventListener('click', () => {
+      const boxEntry = ensureBoxEntry(boxId);
+      // Update both sides immediately (not deferred to the outer Spara
+      // button) so a harvest can't be half-applied if the modal is closed
+      // without saving: remove from active, record in history, persist now.
+      boxEntry.active = boxEntry.active.filter(e => !(e.cropId === cropId && e.plantedDate === plantedDate));
+      boxEntry.history.push({ cropId, plantedDate, harvestedDate: todayStr() });
+      saveState();
       row.remove();
       refreshAll();
     });
@@ -299,7 +380,16 @@ function wireCropPicker(rowsContainerId, addBtnId, initialEntries, boxZone, onCh
   });
   refreshAll();
 
-  return { getSelectedIds: currentEntries };
+  // Used by the rotation-recommendation ✓ buttons: adds a crop already in
+  // display mode (planted today) without the user going through the
+  // select + confirm steps themselves.
+  function addCropDirectly(cropId) {
+    if (rowsContainer.children.length >= MAX_CROPS_PER_BOX) return;
+    if (currentEntries().some(e => e.cropId === cropId)) return;
+    addRow({ cropId, plantedDate: todayStr() });
+  }
+
+  return { getSelectedIds: currentEntries, addCropDirectly };
 }
 
 function isModalOpen() {
@@ -392,7 +482,7 @@ function renderComingSoon(title, text) {
 // ---------- HEM ----------
 
 function renderHem() {
-  const assigned = Object.values(state.boxes).filter(cropIds => Array.isArray(cropIds) && cropIds.length > 0);
+  const assigned = Object.values(state.boxes).filter(entry => entry.active && entry.active.length > 0);
   const totalBoxes = state.boxDefs.length;
   return `
     <h2>Hem</h2>
@@ -526,6 +616,7 @@ function openBoxEditor(boxId) {
   const html = `
     <p class="modal-title">${box.name}</p>
     <p class="modal-sub">${box.zone === 'sol' ? '☀️ Sol hela dagen' : '🌓 Skugga till förmiddag'}</p>
+    <div id="rotation-recs-slot"></div>
     <div class="modal-section">
       <p class="modal-section-title">Vad odlas här?</p>
       <div id="crop-rows"></div>
@@ -549,8 +640,40 @@ function openBoxEditor(boxId) {
   document.body.style.overflow = 'hidden';
 
   const warningSlot = document.getElementById('box-warning-slot');
-  // declared first so the shared updateWarning callback can safely no-op while both pickers are still being built
+  const recsSlot = document.getElementById('rotation-recs-slot');
+  // declared first so the shared callbacks can safely no-op while both pickers are still being built
   let cropPicker, neighborPicker;
+
+  function updateRecommendations() {
+    if (!cropPicker) return;
+    if (cropPicker.getSelectedIds().length > 0) { recsSlot.innerHTML = ''; return; }
+    const recs = computeRecommendations(boxId);
+    if (!recs.length) { recsSlot.innerHTML = ''; return; }
+    const history = getBoxHistory(boxId);
+    const prevName = CROP_LABELS[history[history.length - 1].cropId];
+    recsSlot.innerHTML = `
+      <div class="modal-section">
+        <p class="modal-section-title">🔁 Rekommenderat efter ${prevName}</p>
+        ${recs.map(r => `
+          <div class="rec-row">
+            <span class="rec-name">${r.crop.name}</span>
+            <button type="button" class="rec-add-btn" data-rec-id="${r.id}">✓ Lägg till</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    recsSlot.querySelectorAll('.rec-add-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        cropPicker.addCropDirectly(btn.dataset.recId);
+        onCropOrNeighborChange();
+      });
+    });
+  }
+
+  function onCropOrNeighborChange() {
+    updateWarning();
+    updateRecommendations();
+  }
 
   function updateWarning() {
     if (!cropPicker || !neighborPicker) return;
@@ -594,12 +717,12 @@ function openBoxEditor(boxId) {
       tips.map(t => `<div class="modal-tip">✓ ${t}</div>`).join('');
   }
 
-  cropPicker = wireCropPicker('crop-rows', 'crop-add-btn', getBoxCrops(boxId), box.zone, updateWarning);
-  neighborPicker = wireNeighborPicker('neighbor-rows', 'neighbor-add-btn', boxId, getBoxNeighbors(boxId), updateWarning);
-  updateWarning();
+  cropPicker = wireCropPicker('crop-rows', 'crop-add-btn', boxId, getBoxCrops(boxId), box.zone, onCropOrNeighborChange);
+  neighborPicker = wireNeighborPicker('neighbor-rows', 'neighbor-add-btn', boxId, getBoxNeighbors(boxId), onCropOrNeighborChange);
+  onCropOrNeighborChange();
 
   document.getElementById('box-save-btn').addEventListener('click', () => {
-    state.boxes[boxId] = cropPicker.getSelectedIds();
+    ensureBoxEntry(boxId).active = cropPicker.getSelectedIds();
     setBoxNeighbors(boxId, neighborPicker.getSelectedIds());
     saveState();
     closeModal();
@@ -751,6 +874,13 @@ function openCropModal(id) {
       <p class="modal-section-title">🤝 Kompanjonodling</p>
       ${c.companionGood?.length ? `<p>Trivs bra med: ${c.companionGood.map(id => CROP_LABELS[id] || id).join(', ')}</p>` : ''}
       ${c.companionBad?.length ? `<p>Undvik nära: ${c.companionBad.map(id => CROP_LABELS[id] || id).join(', ')}</p>` : ''}
+    </div>` : ''}
+
+    ${c.family ? `
+    <div class="modal-section">
+      <p class="modal-section-title">🌍 Växtfamilj & jordpåverkan</p>
+      <p>${FAMILY_LABEL[c.family] || c.family}</p>
+      <p>${FEEDER_LABEL[c.feederType] || ''}</p>
     </div>` : ''}
 
     ${c.skadedjur ? `

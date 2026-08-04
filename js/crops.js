@@ -8,6 +8,7 @@ const CROPS = {
     name: 'Spenat', sub: 'Låg kalori · Järn · Folat · K-vitamin',
     zone: 'skugga', maintenance: 'latt',
     growth: { germinateDays: [5, 10], harvestDays: [40, 50] },
+    family: 'spenatvaxt', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Så' },
       { cls: 'så-skörda', label: 'Så + skörda' },
@@ -28,6 +29,7 @@ const CROPS = {
     name: 'Ruccola', sub: 'Låg kalori · K-vitamin · Antioxidanter · C-vitamin',
     zone: 'skugga', maintenance: 'latt',
     growth: { germinateDays: [3, 5], harvestDays: [25, 35] },
+    family: 'kal', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Så' },
       { cls: 'så-skörda', label: 'Så + skörda' },
@@ -47,6 +49,7 @@ const CROPS = {
     name: 'Sallat / Klippsallat', sub: 'Låg kalori · Folat · Fibrer · K-vitamin',
     zone: 'skugga', maintenance: 'latt',
     growth: { germinateDays: [7, 10], harvestDays: [45, 60] },
+    family: 'korgblommig', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Så' },
       { cls: 'så-skörda', label: 'Så + skörda' },
@@ -66,6 +69,7 @@ const CROPS = {
     name: 'Rädisor', sub: 'Låg kalori · Fibrer · C-vitamin · Folat',
     zone: 'skugga', maintenance: 'latt',
     growth: { germinateDays: [3, 7], harvestDays: [21, 28] },
+    family: 'kal', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Så' },
       { cls: 'så-skörda', label: 'Så + skörda' },
@@ -86,6 +90,7 @@ const CROPS = {
     name: 'Sockerärtor', sub: 'Protein · Fibrer · C-vitamin · B-vitamin',
     zone: 'skugga', maintenance: 'medel',
     growth: { germinateDays: [8, 12], harvestDays: [60, 70] },
+    family: 'baljvaxt', feederType: 'builder',
     perioder: [
       { cls: 'så', label: 'Så' }, { cls: 'vårda', label: 'Vårda' },
       { cls: 'skörda', label: 'Skörda' }, { cls: 'skörda', label: 'Skörda' },
@@ -103,6 +108,7 @@ const CROPS = {
     name: 'Bondböna', sub: 'Protein · Fibrer · Järn · Folat',
     zone: 'skugga', maintenance: 'medel',
     growth: { germinateDays: [10, 14], harvestDays: [85, 100] },
+    family: 'baljvaxt', feederType: 'builder',
     perioder: [
       { cls: 'så', label: 'Så (apr)' }, { cls: 'vårda', label: 'Vårda' },
       { cls: 'skörda', label: 'Skörda' }, { cls: 'skörda', label: 'Skörda' },
@@ -121,6 +127,7 @@ const CROPS = {
     name: 'Pak choi', sub: 'Låg kalori · K-vitamin · Kalcium · C-vitamin',
     zone: 'skugga', maintenance: 'latt',
     growth: { germinateDays: [4, 7], harvestDays: [30, 45] },
+    family: 'kal', feederType: 'light',
     perioder: [
       { cls: 'vila', label: 'Vila' }, { cls: 'vila', label: 'Vila' },
       { cls: 'så', label: 'Så' }, { cls: 'vårda-skörda', label: 'Vårda + skörda' },
@@ -138,6 +145,7 @@ const CROPS = {
     name: 'Hösträttika', sub: 'Låg kalori · C-vitamin · Fibrer · Folat',
     zone: 'skugga', maintenance: 'latt',
     growth: { germinateDays: [5, 10], harvestDays: [56, 70] },
+    family: 'kal', feederType: 'light',
     perioder: [
       { cls: 'vila', label: 'Vila' }, { cls: 'vila', label: 'Vila' },
       { cls: 'så', label: 'Så (jul)' }, { cls: 'vårda', label: 'Vårda' },
@@ -155,6 +163,7 @@ const CROPS = {
     name: 'Grönkål', sub: 'Mycket näringstät · K-vitamin · C-vitamin · Kalcium',
     zone: 'skugga', maintenance: 'latt',
     growth: { harvestDays: [60, 80] },
+    family: 'kal', feederType: 'heavy',
     perioder: [
       { cls: 'så', label: 'Så inne / plantera' }, { cls: 'plantera', label: 'Plantera ut' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'vårda', label: 'Vårda' },
@@ -172,6 +181,7 @@ const CROPS = {
     name: 'Mangold', sub: 'Näringstät · K-vitamin · Magnesium · Järn',
     zone: 'skugga', maintenance: 'latt',
     growth: { germinateDays: [7, 10], harvestDays: [50, 60] },
+    family: 'spenatvaxt', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Så' }, { cls: 'vårda-skörda', label: 'Vårda + skörda' },
       { cls: 'skörda', label: 'Skörda' }, { cls: 'skörda', label: 'Skörda' },
@@ -188,6 +198,7 @@ const CROPS = {
     name: 'Purjolök', sub: 'Lagrar bra · K-vitamin · Folat',
     zone: 'skugga', maintenance: 'latt',
     growth: { harvestDays: [90, 120] },
+    family: 'lok', feederType: 'heavy',
     perioder: [
       { cls: 'så', label: 'Plantera' }, { cls: 'vårda', label: 'Vårda' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'vårda', label: 'Vårda' },
@@ -204,6 +215,7 @@ const CROPS = {
     name: 'Jordärtskocka', sub: 'Mycket hög avkastning · Fibrer (inulin) · Kalium',
     zone: 'skugga', maintenance: 'latt',
     growth: { harvestDays: [150, 180] },
+    family: 'korgblommig', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Plantera knölar' }, { cls: 'vårda', label: 'Vårda' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'vårda', label: 'Vårda' },
@@ -220,6 +232,7 @@ const CROPS = {
     name: 'Vitlök', sub: 'Prebiotika · Allicin · Immunförsvar · Antioxidanter',
     zone: 'skugga', maintenance: 'latt',
     growth: { harvestDays: [270, 300] },
+    family: 'lok', feederType: 'light',
     perioder: [
       { cls: 'vårda', label: 'Vårda' }, { cls: 'vårda', label: 'Vårda' },
       { cls: 'skörda', label: 'Skörda (jul)' }, { cls: 'vila', label: 'Vila' },
@@ -238,6 +251,7 @@ const CROPS = {
     name: 'Potatis', sub: 'Mycket hög avkastning · Kalium · C-vitamin · Fibrer',
     zone: 'sol', maintenance: 'latt',
     growth: { harvestDays: [70, 110] },
+    family: 'nattskatta', feederType: 'heavy',
     perioder: [
       { cls: 'så', label: 'Sätt sättpotatis' }, { cls: 'vårda', label: 'Vårda' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'skörda', label: 'Skörda' },
@@ -254,6 +268,7 @@ const CROPS = {
     name: 'Morötter', sub: 'Mycket bra lagring · Betakaroten · Fibrer',
     zone: 'sol', maintenance: 'latt',
     growth: { germinateDays: [14, 21], harvestDays: [65, 80] },
+    family: 'flockblommig', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Så' }, { cls: 'vårda', label: 'Vårda' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'vårda', label: 'Vårda' },
@@ -270,6 +285,7 @@ const CROPS = {
     name: 'Rödbetor', sub: 'Utmärkt lagring · Folat · Nitrat · Antioxidanter',
     zone: 'sol', maintenance: 'latt',
     growth: { germinateDays: [7, 14], harvestDays: [55, 70] },
+    family: 'spenatvaxt', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Så' }, { cls: 'vårda', label: 'Vårda' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'skörda', label: 'Skörda' },
@@ -286,6 +302,7 @@ const CROPS = {
     name: 'Gul lök (sättlök)', sub: 'Lagrar mycket länge · Antioxidanter · Prebiotika',
     zone: 'sol', maintenance: 'latt',
     growth: { harvestDays: [90, 110] },
+    family: 'lok', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Sätt sättlök' }, { cls: 'vårda', label: 'Vårda' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'skörda', label: 'Skörda' },
@@ -302,6 +319,7 @@ const CROPS = {
     name: 'Palsternacka', sub: 'Mycket bra lagring · Fibrer · Folat · Kalium',
     zone: 'sol', maintenance: 'latt',
     growth: { germinateDays: [14, 21], harvestDays: [100, 120] },
+    family: 'flockblommig', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Så' }, { cls: 'vårda', label: 'Vårda' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'vårda', label: 'Vårda' },
@@ -318,6 +336,7 @@ const CROPS = {
     name: 'Vitkål', sub: 'Mycket bra lagring · C-vitamin · Fibrer',
     zone: 'sol', maintenance: 'latt',
     growth: { harvestDays: [70, 90] },
+    family: 'kal', feederType: 'heavy',
     perioder: [
       { cls: 'så', label: 'Så inne / plantera' }, { cls: 'plantera', label: 'Plantera ut' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'vårda', label: 'Vårda' },
@@ -335,6 +354,7 @@ const CROPS = {
     name: 'Tomat', sub: 'Näringsrik · Lykopen · C-vitamin · Kalium',
     zone: 'sol', maintenance: 'krav',
     growth: { harvestDays: [60, 80] },
+    family: 'nattskatta', feederType: 'heavy',
     perioder: [
       { cls: 'vila', label: 'Vila' }, { cls: 'plantera', label: 'Plantera ut' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'vårda-skörda', label: 'Vårda + skörda' },
@@ -351,6 +371,7 @@ const CROPS = {
     name: 'Gurka', sub: 'Vätskerik · K-vitamin · Kalium',
     zone: 'sol', maintenance: 'medel',
     growth: { harvestDays: [50, 70] },
+    family: 'gurkvaxt', feederType: 'heavy',
     perioder: [
       { cls: 'vila', label: 'Vila' }, { cls: 'plantera', label: 'Plantera ut' },
       { cls: 'vårda-skörda', label: 'Vårda + skörda' }, { cls: 'skörda', label: 'Skörda' },
@@ -367,6 +388,7 @@ const CROPS = {
     name: 'Paprika / Chili', sub: 'C-vitamin · Antioxidanter · Capsaicin (chili)',
     zone: 'sol', maintenance: 'krav',
     growth: { harvestDays: [70, 90] },
+    family: 'nattskatta', feederType: 'heavy',
     perioder: [
       { cls: 'vila', label: 'Vila' }, { cls: 'plantera', label: 'Plantera ut' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'vårda-skörda', label: 'Vårda + skörda' },
@@ -383,6 +405,7 @@ const CROPS = {
     name: 'Squash / Sommarsquash', sub: 'Låg kalori · Fibrer · B-vitamin · Kalium',
     zone: 'sol', maintenance: 'medel', fillsBox: true,
     growth: { harvestDays: [45, 60] },
+    family: 'gurkvaxt', feederType: 'heavy',
     perioder: [
       { cls: 'vila', label: 'Vila' }, { cls: 'plantera', label: 'Plantera ut' },
       { cls: 'vårda-skörda', label: 'Vårda + skörda' }, { cls: 'skörda', label: 'Skörda' },
@@ -399,6 +422,7 @@ const CROPS = {
     name: 'Pimiento de Padrón', sub: 'Låg kalori · C-vitamin · Capsaicin · Antioxidanter',
     zone: 'sol', maintenance: 'krav',
     growth: { harvestDays: [60, 80] },
+    family: 'nattskatta', feederType: 'heavy',
     perioder: [
       { cls: 'vila', label: 'Vila' }, { cls: 'plantera', label: 'Plantera ut' },
       { cls: 'vårda', label: 'Vårda' }, { cls: 'vårda-skörda', label: 'Vårda + skörda' },
@@ -417,6 +441,7 @@ const CROPS = {
     name: 'Basilika', sub: 'Aromatisk · Antioxidanter · K-vitamin',
     zone: 'sol', maintenance: 'medel',
     growth: { harvestDays: [30, 45] },
+    family: 'kransblommig', feederType: 'light',
     perioder: [
       { cls: 'vila', label: 'Vila' }, { cls: 'plantera', label: 'Plantera ut (efter frost)' },
       { cls: 'vårda-skörda', label: 'Vårda + skörda' }, { cls: 'skörda', label: 'Skörda' },
@@ -433,6 +458,7 @@ const CROPS = {
     name: 'Timjan', sub: 'Aromatisk · Perenn · Antioxidanter',
     zone: 'sol', maintenance: 'latt',
     growth: { harvestDays: [30, 45] },
+    family: 'kransblommig', feederType: 'light',
     perioder: [
       { cls: 'plantera', label: 'Plantera' }, { cls: 'skörda', label: 'Skörda' },
       { cls: 'skörda', label: 'Skörda' }, { cls: 'skörda', label: 'Skörda' },
@@ -449,6 +475,7 @@ const CROPS = {
     name: 'Oregano', sub: 'Aromatisk · Perenn · Antioxidanter',
     zone: 'sol', maintenance: 'latt',
     growth: { harvestDays: [30, 45] },
+    family: 'kransblommig', feederType: 'light',
     perioder: [
       { cls: 'plantera', label: 'Plantera' }, { cls: 'skörda', label: 'Skörda' },
       { cls: 'skörda', label: 'Skörda' }, { cls: 'skörda', label: 'Skörda' },
@@ -465,6 +492,7 @@ const CROPS = {
     name: 'Gräslök', sub: 'Aromatisk · Perenn · K-vitamin',
     zone: 'valfri', maintenance: 'latt',
     growth: { germinateDays: [10, 14], harvestDays: [30, 45] },
+    family: 'lok', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Plantera/så' }, { cls: 'skörda', label: 'Skörda' },
       { cls: 'skörda', label: 'Skörda' }, { cls: 'skörda', label: 'Skörda' },
@@ -481,6 +509,7 @@ const CROPS = {
     name: 'Persilja', sub: 'Mycket näringstät · K-vitamin · C-vitamin · Järn',
     zone: 'skugga', maintenance: 'latt',
     growth: { germinateDays: [14, 21], harvestDays: [70, 90] },
+    family: 'flockblommig', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Så' }, { cls: 'vårda-skörda', label: 'Vårda + skörda' },
       { cls: 'skörda', label: 'Skörda' }, { cls: 'skörda', label: 'Skörda' },
@@ -497,6 +526,7 @@ const CROPS = {
     name: 'Dill', sub: 'Aromatisk · C-vitamin · Antioxidanter',
     zone: 'valfri', maintenance: 'latt',
     growth: { germinateDays: [10, 14], harvestDays: [40, 55] },
+    family: 'flockblommig', feederType: 'light',
     perioder: [
       { cls: 'så', label: 'Så' }, { cls: 'så-skörda', label: 'Så + skörda' },
       { cls: 'skörda', label: 'Skörda' }, { cls: 'skörda', label: 'Skörda' },

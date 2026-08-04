@@ -352,7 +352,7 @@ select.crop-picker {
   font-size: 0.9rem;
   flex-shrink: 0;
 }
-.crop-row-edit, .crop-row-remove {
+.crop-row-edit, .crop-row-remove, .crop-row-harvest {
   background: none;
   border: none;
   font-size: 1rem;
@@ -361,6 +361,26 @@ select.crop-picker {
   color: var(--muted);
 }
 .crop-row-remove { color: #922B21; }
+
+.rec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rec-row:last-child { border-bottom: none; }
+.rec-name { font-size: 0.88rem; font-weight: 600; color: var(--soil); }
+.rec-add-btn {
+  background: var(--moss);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
 
 .status-pill {
   display: inline-block;
