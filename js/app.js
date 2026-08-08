@@ -290,10 +290,10 @@ function wireNeighborPicker(rowsContainerId, addBtnId, excludeId, initialIds, on
 // date input pair, confirmed with a ✓ button (two fields need to be set
 // together, so there's no single "change" event to auto-commit on).
 // Up to MAX_CROPS_PER_BOX crops. boxZone feeds the stage estimate.
-// Harvesting is immediate (not deferred to the outer Spara button): it
-// writes straight to state.boxes[boxId].history so a click can't be lost
-// if the modal is closed without saving.
-function wireCropPicker(rowsContainerId, addBtnId, boxId, initialEntries, boxZone, onChange) {
+// Marking something harvested is deferred to the outer Spara button, same
+// as every other change here - clicking the basket icon just flags the row
+// (with an Ångra/undo option) rather than writing to state immediately.
+function wireCropPicker(rowsContainerId, addBtnId, initialEntries, boxZone, onChange) {
   const rowsContainer = document.getElementById(rowsContainerId);
   const addBtn = document.getElementById(addBtnId);
 
@@ -301,6 +301,16 @@ function wireCropPicker(rowsContainerId, addBtnId, boxId, initialEntries, boxZon
     return Array.from(rowsContainer.children)
       .filter(row => row.dataset.cropId)
       .map(row => ({ cropId: row.dataset.cropId, plantedDate: row.dataset.plantedDate || null }));
+  }
+
+  function pendingHarvests() {
+    return Array.from(rowsContainer.children)
+      .filter(row => row.dataset.harvestCropId)
+      .map(row => ({
+        cropId: row.dataset.harvestCropId,
+        plantedDate: row.dataset.harvestPlantedDate || null,
+        note: row.querySelector('.crop-row-harvest-note')?.value.trim() || ''
+      }));
   }
 
   function refreshAll() {
@@ -312,6 +322,8 @@ function wireCropPicker(rowsContainerId, addBtnId, boxId, initialEntries, boxZon
     const crop = CROPS[cropId];
     row.dataset.cropId = cropId;
     row.dataset.plantedDate = plantedDate || '';
+    row.dataset.harvestCropId = '';
+    row.dataset.harvestPlantedDate = '';
     const stage = computeStage(crop, plantedDate, boxZone);
     const dateLabel = plantedDate ? `Planterad ${formatDateSv(parseDate(plantedDate))}` : 'Inget datum registrerat';
     row.innerHTML = `
@@ -329,15 +341,25 @@ function wireCropPicker(rowsContainerId, addBtnId, boxId, initialEntries, boxZon
       row.remove();
       refreshAll();
     });
-    row.querySelector('.crop-row-harvest').addEventListener('click', () => {
-      const boxEntry = ensureBoxEntry(boxId);
-      // Update both sides immediately (not deferred to the outer Spara
-      // button) so a harvest can't be half-applied if the modal is closed
-      // without saving: remove from active, record in history, persist now.
-      boxEntry.active = boxEntry.active.filter(e => !(e.cropId === cropId && e.plantedDate === plantedDate));
-      boxEntry.history.push({ cropId, plantedDate, harvestedDate: todayStr() });
-      saveState();
-      row.remove();
+    row.querySelector('.crop-row-harvest').addEventListener('click', () => renderRowPendingHarvest(row, cropId, plantedDate));
+  }
+
+  function renderRowPendingHarvest(row, cropId, plantedDate) {
+    const crop = CROPS[cropId];
+    row.dataset.cropId = '';
+    row.dataset.harvestCropId = cropId;
+    row.dataset.harvestPlantedDate = plantedDate || '';
+    row.className = 'crop-picker-row crop-picker-row-pending';
+    row.innerHTML = `
+      <div class="crop-row-main">
+        <div class="crop-row-pending-label">${crop.name} – markeras som skördad när du sparar</div>
+        <input type="text" class="crop-row-harvest-note" placeholder="Kommentar, t.ex. hur skörden gick (valfritt)">
+      </div>
+      <button type="button" class="crop-row-undo-harvest">↩ Ångra</button>
+    `;
+    row.querySelector('.crop-row-undo-harvest').addEventListener('click', () => {
+      row.className = 'crop-picker-row';
+      renderRowDisplay(row, cropId, plantedDate);
       refreshAll();
     });
   }
@@ -389,7 +411,7 @@ function wireCropPicker(rowsContainerId, addBtnId, boxId, initialEntries, boxZon
     addRow({ cropId, plantedDate: todayStr() });
   }
 
-  return { getSelectedIds: currentEntries, addCropDirectly };
+  return { getSelectedIds: currentEntries, addCropDirectly, getPendingHarvests: pendingHarvests };
 }
 
 function isModalOpen() {
@@ -470,13 +492,84 @@ function render() {
   else if (currentView === 'lador') el.innerHTML = renderLador();
   else if (currentView === 'grodor') el.innerHTML = renderGrodor();
   else if (currentView === 'barbuskar') el.innerHTML = renderBarbuskar();
-  else if (currentView === 'dagbok') el.innerHTML = renderComingSoon('Dagbok', 'Snabb loggning av vattning, gödsling och skörd kommer i nästa version.');
+  else if (currentView === 'dagbok') el.innerHTML = renderDagbok();
   else if (currentView === 'vader') el.innerHTML = renderComingSoon('Väder', 'Väderprognos och odlingsråd baserat på din plats kommer i nästa version.');
   attachViewHandlers();
 }
 
 function renderComingSoon(title, text) {
   return `<h2>${title}</h2><div class="empty-state">🚧 ${text}</div>`;
+}
+
+// ---------- DAGBOK / HISTORIK ----------
+// Shared by the Dagbok tab (whole-garden feed) and a single box's "Historik"
+// button (same underlying per-box history, just filtered) - one source of
+// data, two views onto it.
+
+function historyEntriesForDisplay(filterBoxId) {
+  const boxes = filterBoxId ? state.boxDefs.filter(b => b.id === filterBoxId) : state.boxDefs;
+  const entries = boxes.flatMap(box =>
+    getBoxHistory(box.id).map((h, idx) => ({ ...h, boxId: box.id, boxName: box.name, historyIdx: idx }))
+  );
+  entries.sort((a, b) => (b.harvestedDate || '').localeCompare(a.harvestedDate || ''));
+  return entries;
+}
+
+function renderHistoryRows(entries, showBoxName) {
+  if (!entries.length) return '<div class="empty-state">Inget skördat än.</div>';
+  return entries.map(e => {
+    const crop = CROPS[e.cropId];
+    const plantedLabel = e.plantedDate ? formatDateSv(parseDate(e.plantedDate)) : 'okänt datum';
+    const harvestedLabel = e.harvestedDate ? formatDateSv(parseDate(e.harvestedDate)) : 'okänt datum';
+    return `
+      <div class="history-row">
+        <div class="history-row-top">
+          <button type="button" class="history-crop-name" data-crop="${e.cropId}">${crop ? crop.name : e.cropId}</button>
+          ${showBoxName ? `<span class="history-box-name">${e.boxName}</span>` : ''}
+        </div>
+        <div class="history-dates">${plantedLabel} → ${harvestedLabel}</div>
+        <textarea class="history-note" data-box-id="${e.boxId}" data-history-idx="${e.historyIdx}" placeholder="Kommentar (valfritt)">${e.note || ''}</textarea>
+      </div>
+    `;
+  }).join('');
+}
+
+function wireHistoryRowHandlers(container) {
+  container.querySelectorAll('.history-crop-name[data-crop]').forEach(el => {
+    el.addEventListener('click', () => openCropModal(el.dataset.crop));
+  });
+  container.querySelectorAll('.history-note').forEach(el => {
+    el.addEventListener('blur', () => {
+      const boxEntry = ensureBoxEntry(el.dataset.boxId);
+      const idx = Number(el.dataset.historyIdx);
+      if (boxEntry.history[idx]) {
+        boxEntry.history[idx].note = el.value.trim();
+        saveState();
+      }
+    });
+  });
+}
+
+function renderDagbok() {
+  const entries = historyEntriesForDisplay(null);
+  return `
+    <h2>Dagbok</h2>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px">Allt du skördat, över hela trädgården.</p>
+    ${renderHistoryRows(entries, true)}
+  `;
+}
+
+function openBoxHistory(boxId) {
+  const box = state.boxDefs.find(b => b.id === boxId);
+  const entries = historyEntriesForDisplay(boxId);
+  const html = `
+    <p class="modal-title">Historik – ${box.name}</p>
+    <button type="button" class="chip" id="history-back-btn" style="margin-bottom:14px">← Tillbaka</button>
+    ${renderHistoryRows(entries, false)}
+  `;
+  document.getElementById('modal-content').innerHTML = html;
+  wireHistoryRowHandlers(document.getElementById('modal-content'));
+  document.getElementById('history-back-btn').addEventListener('click', () => openBoxEditor(boxId));
 }
 
 // ---------- HEM ----------
@@ -616,6 +709,7 @@ function openBoxEditor(boxId) {
   const html = `
     <p class="modal-title">${box.name}</p>
     <p class="modal-sub">${box.zone === 'sol' ? '☀️ Sol hela dagen' : '🌓 Skugga till förmiddag'}</p>
+    <button type="button" class="chip" id="history-btn" style="margin-bottom:14px">📜 Historik</button>
     <div id="rotation-recs-slot"></div>
     <div class="modal-section">
       <p class="modal-section-title">Vad odlas här?</p>
@@ -717,17 +811,24 @@ function openBoxEditor(boxId) {
       tips.map(t => `<div class="modal-tip">✓ ${t}</div>`).join('');
   }
 
-  cropPicker = wireCropPicker('crop-rows', 'crop-add-btn', boxId, getBoxCrops(boxId), box.zone, onCropOrNeighborChange);
+  cropPicker = wireCropPicker('crop-rows', 'crop-add-btn', getBoxCrops(boxId), box.zone, onCropOrNeighborChange);
   neighborPicker = wireNeighborPicker('neighbor-rows', 'neighbor-add-btn', boxId, getBoxNeighbors(boxId), onCropOrNeighborChange);
   onCropOrNeighborChange();
 
   document.getElementById('box-save-btn').addEventListener('click', () => {
-    ensureBoxEntry(boxId).active = cropPicker.getSelectedIds();
+    const boxEntry = ensureBoxEntry(boxId);
+    boxEntry.active = cropPicker.getSelectedIds();
+    const harvestedDate = todayStr();
+    cropPicker.getPendingHarvests().forEach(entry => {
+      boxEntry.history.push({ cropId: entry.cropId, plantedDate: entry.plantedDate, harvestedDate, note: entry.note });
+    });
     setBoxNeighbors(boxId, neighborPicker.getSelectedIds());
     saveState();
     closeModal();
     render();
   });
+
+  document.getElementById('history-btn').addEventListener('click', () => openBoxHistory(boxId));
 
   document.getElementById('box-delete-btn').addEventListener('click', () => removeBox(boxId));
 }
@@ -957,6 +1058,7 @@ function closeModal() {
 // ---------- EVENT WIRING ----------
 
 function attachViewHandlers() {
+  wireHistoryRowHandlers(document.getElementById('view'));
   document.querySelectorAll('.crop-row[data-crop]').forEach(el => {
     el.addEventListener('click', () => openCropModal(el.dataset.crop));
   });
