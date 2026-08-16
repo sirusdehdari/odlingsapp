@@ -1,41 +1,31 @@
-const STORAGE_KEY = 'odling_box_state_v1';
+const STORAGE_KEY = 'odling_state_v2';
 const MONTH_LABELS = ['Apr–Maj', 'Jun', 'Jul', 'Aug', 'Sep–Okt', 'Nov–Mar'];
 const MAINT_LABEL = { latt: 'Lättskött', medel: 'Medel', krav: 'Kräver omsorg' };
 const ZONE_LABEL = { sol: '☀️ Bäst i full sol', skugga: '🌓 Klarar skugga bra', valfri: '➖ Spelar mindre roll' };
 const MAINT_ICON = { latt: '🟢', medel: '🟡', krav: '🔴' };
 const ZONE_ICON = { sol: '☀️', skugga: '🌓', valfri: '➖' };
+const MAX_PLOT_DIM = 60;
+const MAX_CROPS_PER_BOX = 4;
 
 let state = loadState();
+let plotZoom = 26; // px per grid cell, adjustable via +/- controls
 
+// v2: state = { plot: {width,height,latitude} | null, objects: [...], boxes: {...} }.
+// No migration from the old box-list model - the user explicitly asked to
+// start fresh, so an old save under the v1 key is simply never read again.
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.boxDefs) return normalizeBoxes(parsed);
+      if (parsed.plot !== undefined) return parsed;
     }
   } catch (e) { /* fall through to defaults */ }
-  return { boxDefs: JSON.parse(JSON.stringify(BOX_CONFIG)), boxes: {} };
+  return { plot: null, objects: [], boxes: {} };
 }
 
-// Older saves stored each box's crops as a plain array (either raw id
-// strings, or {cropId, plantedDate} objects with no history/active split).
-// Upgrade those in place to {active: [...], history: [...]}, leaving
-// already-upgraded entries untouched. plantedDate is left null when
-// unknown - the user can set it via the edit (✎) icon.
-function normalizeBoxes(state) {
-  Object.keys(state.boxes).forEach(boxId => {
-    let val = state.boxes[boxId];
-    if (Array.isArray(val)) {
-      val = { active: val.map(entry =>
-        typeof entry === 'string' ? { cropId: entry, plantedDate: null } : entry
-      ), history: [] };
-    }
-    if (!val.active) val.active = [];
-    if (!val.history) val.history = [];
-    state.boxes[boxId] = val;
-  });
-  return state;
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
 function ensureBoxEntry(boxId) {
@@ -43,8 +33,65 @@ function ensureBoxEntry(boxId) {
   return state.boxes[boxId];
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function getBoxCrops(boxId) {
+  return (state.boxes[boxId] && state.boxes[boxId].active) || [];
+}
+
+function getBoxHistory(boxId) {
+  return (state.boxes[boxId] && state.boxes[boxId].history) || [];
+}
+
+// ---------- PLOT / GRID OBJECTS ----------
+
+function findObjectAt(x, y) {
+  return state.objects.find(o => o.cells.some(([cx, cy]) => cx === x && cy === y));
+}
+
+function addObject(type, cells, props) {
+  const id = `obj-${Date.now()}`;
+  state.objects.push({ id, type, cells, ...props });
+  if (type === 'box') ensureBoxEntry(id);
+  saveState();
+  return id;
+}
+
+function updateObjectInPlace(objectId, type, props) {
+  const obj = state.objects.find(o => o.id === objectId);
+  if (!obj) return;
+  obj.type = type;
+  Object.keys(obj).forEach(k => { if (!['id', 'type', 'cells'].includes(k)) delete obj[k]; });
+  Object.assign(obj, props);
+  if (type === 'box') ensureBoxEntry(objectId);
+  saveState();
+}
+
+// Detaches a single cell from a multi-cell object, leaving the rest of its
+// footprint (and, for boxes, all crop/history data) untouched. Only asks
+// for confirmation when this would delete a box's last cell, since that
+// destroys real crop history - every other object type is low-stakes.
+function removeCellFromObject(objectId, x, y) {
+  const obj = state.objects.find(o => o.id === objectId);
+  if (!obj) return;
+  if (obj.cells.length <= 1 && obj.type === 'box' && !confirm('Ta bort den här lådan? Det här går inte att ångra.')) return;
+  obj.cells = obj.cells.filter(([cx, cy]) => !(cx === x && cy === y));
+  if (obj.cells.length === 0) {
+    state.objects = state.objects.filter(o => o.id !== objectId);
+    if (obj.type === 'box') delete state.boxes[objectId];
+  }
+  saveState();
+  closeModal();
+  render();
+}
+
+function removeWholeObject(objectId) {
+  const obj = state.objects.find(o => o.id === objectId);
+  if (!obj) return;
+  if (obj.type === 'box' && !confirm('Ta bort den här lådan? Det här går inte att ångra.')) return;
+  state.objects = state.objects.filter(o => o.id !== objectId);
+  if (obj.type === 'box') delete state.boxes[objectId];
+  saveState();
+  closeModal();
+  render();
 }
 
 // Returns which perioder-index (0-5, matching MONTH_LABELS) today falls into.
@@ -58,17 +105,6 @@ function currentPeriodIndex(date = new Date()) {
   if (m === 7) return 3;             // aug
   if (m === 8 || m === 9) return 4;  // sep, okt
   return 5;                          // nov, dec, jan, feb, mar
-}
-
-const MAX_NEIGHBORS = 8;
-const MAX_CROPS_PER_BOX = 4;
-
-function getBoxCrops(boxId) {
-  return (state.boxes[boxId] && state.boxes[boxId].active) || [];
-}
-
-function getBoxHistory(boxId) {
-  return (state.boxes[boxId] && state.boxes[boxId].history) || [];
 }
 
 const FAMILY_LABEL = {
@@ -104,17 +140,18 @@ function rotationScore(prevCrop, candidate) {
 
 // Only returns crops that are meaningfully better than "grow whatever" -
 // if nothing clears the bar, returns an empty list rather than padding it
-// out with lukewarm options.
+// out with lukewarm options. No zone filter for now: boxes don't carry a
+// sun-exposure estimate yet (that lands once the sun/shadow calculation
+// phase ships), so every crop is a candidate regardless of zone.
 function computeRecommendations(boxId) {
-  const box = state.boxDefs.find(b => b.id === boxId);
   const history = getBoxHistory(boxId);
-  if (!box || !history.length) return [];
-  const prevCrop = CROPS[history[history.length - 1].cropId];
+  if (!history.length) return [];
+  const lastCropId = history[history.length - 1].cropId;
+  const prevCrop = CROPS[lastCropId];
   if (!prevCrop) return [];
 
   const scored = Object.entries(CROPS)
-    .filter(([id]) => id !== history[history.length - 1].cropId)
-    .filter(([, c]) => c.zone === box.zone || c.zone === 'valfri')
+    .filter(([id]) => id !== lastCropId)
     .map(([id, c]) => ({ id, crop: c, score: rotationScore(prevCrop, c) }))
     .filter(s => s.score >= ROTATION_RECOMMEND_THRESHOLD)
     .sort((a, b) => b.score - a.score || a.crop.name.localeCompare(b.crop.name, 'sv'));
@@ -169,17 +206,15 @@ function checkSowingLateness(crop, plantedDateStr) {
   return null;
 }
 
-// Shade boxes get less light, so growth is assumed to take somewhat longer.
-// A flat buffer rather than a precise per-crop figure, since real variation
-// (weather, soil, microclimate) swamps any precision finer than this anyway.
-const SHADE_GROWTH_BUFFER = 1.15;
-
 // Where a planting stands relative to its approximate germinate/harvest
 // windows. Ranges, not exact predictions - real growth time varies a lot.
+// boxZone is currently always null (no automated sun-exposure estimate
+// yet), so no shade buffer is applied - that returns once the sun/shadow
+// calculation phase ships and can tell us how sunny a box's cells actually are.
 function computeStage(crop, plantedDateStr, boxZone) {
   if (!plantedDateStr || !crop.growth) return null;
   const daysSince = daysBetween(parseDate(plantedDateStr), new Date());
-  const buffer = boxZone === 'skugga' ? SHADE_GROWTH_BUFFER : 1;
+  const buffer = boxZone === 'skugga' ? 1.15 : 1;
   const g = crop.growth;
   if (g.germinateDays && daysSince < g.germinateDays[0] * buffer) {
     return { label: 'Gror', cls: 'så' };
@@ -189,99 +224,6 @@ function computeStage(crop, plantedDateStr, boxZone) {
   if (daysSince < harvestMin) return { label: 'Växer', cls: 'vårda' };
   if (daysSince <= harvestMax) return { label: 'Redo att skörda', cls: 'skörda' };
   return { label: 'Försenad – kolla den', cls: 'overdue' };
-}
-
-function getBoxNeighbors(boxId) {
-  const box = state.boxDefs.find(b => b.id === boxId);
-  return (box && box.neighbors) || [];
-}
-
-// Keeps neighbor relationships symmetric: if A gets B added/removed as a
-// neighbor, B's own list is updated to match automatically.
-function setBoxNeighbors(boxId, newNeighborIds) {
-  const box = state.boxDefs.find(b => b.id === boxId);
-  if (!box) return;
-  const oldNeighborIds = box.neighbors || [];
-  const added = newNeighborIds.filter(id => !oldNeighborIds.includes(id));
-  const removed = oldNeighborIds.filter(id => !newNeighborIds.includes(id));
-  box.neighbors = newNeighborIds;
-  added.forEach(otherId => {
-    const other = state.boxDefs.find(b => b.id === otherId);
-    if (!other) return;
-    other.neighbors = other.neighbors || [];
-    if (!other.neighbors.includes(boxId)) other.neighbors.push(boxId);
-  });
-  removed.forEach(otherId => {
-    const other = state.boxDefs.find(b => b.id === otherId);
-    if (!other) return;
-    other.neighbors = (other.neighbors || []).filter(id => id !== boxId);
-  });
-}
-
-// Builds and wires up the dynamic "add neighbor" row list inside a modal.
-// excludeId may be undefined (used when adding a brand new box that has no id yet).
-function wireNeighborPicker(rowsContainerId, addBtnId, excludeId, initialIds, onChange) {
-  const rowsContainer = document.getElementById(rowsContainerId);
-  const addBtn = document.getElementById(addBtnId);
-  let rowIdCounter = 0;
-
-  function otherBoxes() {
-    return state.boxDefs.filter(b => b.id !== excludeId);
-  }
-
-  function currentSelectedIds() {
-    return Array.from(rowsContainer.querySelectorAll('select.neighbor-select'))
-      .map(s => s.value)
-      .filter(Boolean);
-  }
-
-  function refreshOptions() {
-    const selected = currentSelectedIds();
-    rowsContainer.querySelectorAll('select.neighbor-select').forEach(sel => {
-      const own = sel.value;
-      const optionsHtml = otherBoxes()
-        .filter(b => b.id === own || !selected.includes(b.id))
-        .map(b => `<option value="${b.id}" ${b.id === own ? 'selected' : ''}>${b.name}</option>`)
-        .join('');
-      sel.innerHTML = `<option value="">— Välj låda —</option>${optionsHtml}`;
-      sel.value = own;
-    });
-    addBtn.style.display = rowsContainer.children.length >= MAX_NEIGHBORS ? 'none' : '';
-    if (onChange) onChange();
-  }
-
-  function addRow(selectedId) {
-    const row = document.createElement('div');
-    row.className = 'neighbor-row';
-    row.innerHTML = `
-      <select class="crop-picker neighbor-select"></select>
-      <button type="button" class="neighbor-remove-btn">✕</button>
-    `;
-    rowsContainer.appendChild(row);
-    const select = row.querySelector('select');
-    // A freshly created <select> has no <option> elements yet, so setting
-    // .value before populating options is silently ignored by the browser.
-    // Build this row's own option list first so the initial selection actually sticks.
-    const initialOptionsHtml = otherBoxes()
-      .map(b => `<option value="${b.id}" ${b.id === selectedId ? 'selected' : ''}>${b.name}</option>`)
-      .join('');
-    select.innerHTML = `<option value="">— Välj låda —</option>${initialOptionsHtml}`;
-    select.value = selectedId || '';
-    select.addEventListener('change', refreshOptions);
-    row.querySelector('.neighbor-remove-btn').addEventListener('click', () => {
-      row.remove();
-      refreshOptions();
-    });
-    refreshOptions();
-  }
-
-  initialIds.forEach(id => addRow(id));
-  addBtn.addEventListener('click', () => {
-    if (rowsContainer.children.length < MAX_NEIGHBORS) addRow('');
-  });
-  refreshOptions();
-
-  return { getSelectedIds: currentSelectedIds };
 }
 
 // Builds and wires up the "vad odlas här" picker. Saved crops show as a
@@ -460,8 +402,8 @@ function importDataFile(file) {
   reader.onload = () => {
     try {
       const parsed = JSON.parse(reader.result);
-      if (!parsed.boxDefs || !parsed.boxes) throw new Error('Ogiltigt format');
-      state = normalizeBoxes(parsed);
+      if (parsed.plot === undefined || !parsed.objects || !parsed.boxes) throw new Error('Ogiltigt format');
+      state = parsed;
       saveState();
       render();
       alert('Data återställd!');
@@ -474,7 +416,7 @@ function importDataFile(file) {
 
 // ---------- NAVIGATION ----------
 
-const VIEWS = ['hem', 'lador', 'grodor', 'barbuskar', 'dagbok', 'vader'];
+const VIEWS = ['hem', 'tomt', 'grodor', 'barbuskar', 'dagbok', 'vader'];
 let currentView = 'hem';
 
 function goTo(view) {
@@ -489,12 +431,13 @@ function render() {
   });
   const el = document.getElementById('view');
   if (currentView === 'hem') el.innerHTML = renderHem();
-  else if (currentView === 'lador') el.innerHTML = renderLador();
+  else if (currentView === 'tomt') el.innerHTML = renderTomt();
   else if (currentView === 'grodor') el.innerHTML = renderGrodor();
   else if (currentView === 'barbuskar') el.innerHTML = renderBarbuskar();
   else if (currentView === 'dagbok') el.innerHTML = renderDagbok();
   else if (currentView === 'vader') el.innerHTML = renderComingSoon('Väder', 'Väderprognos och odlingsråd baserat på din plats kommer i nästa version.');
   attachViewHandlers();
+  wirePlotGrid();
 }
 
 function renderComingSoon(title, text) {
@@ -507,8 +450,8 @@ function renderComingSoon(title, text) {
 // data, two views onto it.
 
 function historyEntriesForDisplay(filterBoxId) {
-  const boxes = filterBoxId ? state.boxDefs.filter(b => b.id === filterBoxId) : state.boxDefs;
-  const entries = boxes.flatMap(box =>
+  const boxObjects = state.objects.filter(o => o.type === 'box' && (!filterBoxId || o.id === filterBoxId));
+  const entries = boxObjects.flatMap(box =>
     getBoxHistory(box.id).map((h, idx) => ({ ...h, boxId: box.id, boxName: box.name, historyIdx: idx }))
   );
   entries.sort((a, b) => (b.harvestedDate || '').localeCompare(a.harvestedDate || ''));
@@ -560,7 +503,8 @@ function renderDagbok() {
 }
 
 function openBoxHistory(boxId) {
-  const box = state.boxDefs.find(b => b.id === boxId);
+  const box = state.objects.find(o => o.id === boxId);
+  if (!box) return;
   const entries = historyEntriesForDisplay(boxId);
   const html = `
     <p class="modal-title">Historik – ${box.name}</p>
@@ -576,14 +520,14 @@ function openBoxHistory(boxId) {
 
 function renderHem() {
   const assigned = Object.values(state.boxes).filter(entry => entry.active && entry.active.length > 0);
-  const totalBoxes = state.boxDefs.length;
+  const totalBoxes = state.objects.filter(o => o.type === 'box').length;
   return `
     <h2>Hem</h2>
     <div class="card">
       <div class="section-title" style="margin-top:0">Just nu</div>
       <p style="font-size:0.9rem;line-height:1.6">
         ${assigned.length} av ${totalBoxes} lådor har en gröda tilldelad.
-        ${assigned.length === 0 ? 'Gå till <b>Lådor</b> för att komma igång.' : 'Se detaljer under <b>Lådor</b>.'}
+        ${assigned.length === 0 ? 'Gå till <b>Tomt</b> för att komma igång.' : 'Se detaljer under <b>Tomt</b>.'}
       </p>
     </div>
     <div class="card">
@@ -606,109 +550,294 @@ function renderHem() {
   `;
 }
 
-// ---------- LÅDOR ----------
+// ---------- TOMT (plot map) ----------
 
-function renderLador() {
-  const zones = [
-    { id: 'skugga', label: 'Häcken (skugga till förmiddag)' },
-    { id: 'sol', label: 'Soliga läget (sol hela dagen)' }
-  ];
+function renderTomt() {
+  if (!state.plot || !state.plot.width) return renderPlotSetup();
+  return renderPlotGrid();
+}
+
+function renderPlotSetup() {
   return `
-    <h2>Lådor</h2>
-    <button class="chip active" id="add-box-btn" style="margin-bottom:16px">+ Lägg till låda</button>
-    ${zones.map(z => `
-      <div class="section-title">${z.label}</div>
-      <div class="box-grid">
-        ${state.boxDefs.filter(b => b.zone === z.id).map(renderBoxTile).join('') || '<div class="empty-state" style="grid-column:1/-1;padding:16px">Inga lådor här ännu.</div>'}
+    <h2>Sätt upp din tomt</h2>
+    <div class="card">
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.6;margin-bottom:14px">
+        Ange tomtens ungefärliga mått i meter. X är bredd (väster → öster), Y är djup (söder → norr). Varje ruta blir 1×1 meter.
+      </p>
+      <p class="modal-section-title">Bredd, X-led (m)</p>
+      <input type="number" id="plot-width-input" min="1" max="${MAX_PLOT_DIM}" value="20" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:12px">
+      <p class="modal-section-title">Djup, Y-led (m)</p>
+      <input type="number" id="plot-height-input" min="1" max="${MAX_PLOT_DIM}" value="20" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:12px">
+      <p class="modal-section-title">Ungefärlig latitud (grader nord)</p>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:6px">Används längre fram för att räkna ut sol/skugga. Standardvärdet passar mellersta Sverige.</p>
+      <input type="number" id="plot-lat-input" step="0.1" value="59.8" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:16px">
+      <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="plot-setup-btn">Skapa karta</button>
+    </div>
+  `;
+}
+
+function renderPlotGrid() {
+  const { width, height } = state.plot;
+  let cellsHtml = '';
+  for (let y = height; y >= 1; y--) {
+    for (let x = 1; x <= width; x++) {
+      const obj = findObjectAt(x, y);
+      const typeClass = `plot-cell-${obj ? obj.type : 'gras'}`;
+      const icon = obj ? (OBJECT_TYPE_LABELS[obj.type] || '').split(' ')[0] : '';
+      cellsHtml += `<div class="plot-cell ${typeClass}" data-x="${x}" data-y="${y}">${icon}</div>`;
+    }
+  }
+  return `
+    <div class="plot-toolbar">
+      <h2 style="margin:0">Tomt</h2>
+      <div class="plot-zoom-controls">
+        <button type="button" class="chip" id="plot-zoom-out">−</button>
+        <button type="button" class="chip" id="plot-zoom-in">+</button>
       </div>
-    `).join('')}
+    </div>
+    <p class="plot-compass-line">🧭 N (upp) · S (ner) · V (vänster) · Ö (höger)</p>
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:10px">Dra över flera rutor för att markera ett område, tryck på en ruta för att redigera den.</p>
+    <div class="plot-grid-scroll">
+      <div class="plot-grid" id="plot-grid" style="grid-template-columns:repeat(${width}, ${plotZoom}px);grid-template-rows:repeat(${height}, ${plotZoom}px)">
+        ${cellsHtml}
+      </div>
+    </div>
   `;
 }
 
-function renderBoxTile(box) {
-  const cropEntries = getBoxCrops(box.id);
-  const firstCrop = cropEntries[0] ? CROPS[cropEntries[0].cropId] : null;
-  const status = firstCrop ? firstCrop.perioder[currentPeriodIndex()] : null;
-  const extra = cropEntries.length > 1 ? ` +${cropEntries.length - 1} till` : '';
-  return `
-    <button class="box-tile zone-${box.zone}" data-box="${box.id}">
-      <div class="box-name">${box.name}</div>
-      <div class="box-crop ${firstCrop ? '' : 'empty'}">${firstCrop ? firstCrop.name + extra : 'Tom'}</div>
-      ${status ? `<div class="status-pill ${status.cls}">${status.label}</div>` : ''}
-    </button>
-  `;
+// The grid element is fully recreated (fresh innerHTML) on every render, so
+// listeners are attached to it directly (not `window`) - each render's old
+// element and its listeners are simply discarded together, nothing leaks.
+// Pointer capture keeps move/up events routed to the grid even if the
+// finger/cursor drifts outside it mid-drag; because capture makes e.target
+// always report the grid itself, the actual cell under the pointer is
+// looked up via elementFromPoint(clientX, clientY) instead.
+function wirePlotGrid() {
+  const grid = document.getElementById('plot-grid');
+  if (!grid) return;
+
+  let dragging = false;
+  let startCell = null;
+
+  function cellFromEvent(e) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const target = el && el.closest('.plot-cell');
+    if (!target) return null;
+    return { x: Number(target.dataset.x), y: Number(target.dataset.y) };
+  }
+
+  function selectionBounds(a, b) {
+    return {
+      x1: Math.min(a.x, b.x), x2: Math.max(a.x, b.x),
+      y1: Math.min(a.y, b.y), y2: Math.max(a.y, b.y)
+    };
+  }
+
+  function paintSelection(bounds) {
+    grid.querySelectorAll('.plot-cell').forEach(cell => {
+      const x = Number(cell.dataset.x), y = Number(cell.dataset.y);
+      const inSel = bounds && x >= bounds.x1 && x <= bounds.x2 && y >= bounds.y1 && y <= bounds.y2;
+      cell.classList.toggle('plot-cell-selected', !!inSel);
+    });
+  }
+
+  function endDrag(e) {
+    if (!dragging) return;
+    dragging = false;
+    try { grid.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
+    const cell = cellFromEvent(e) || startCell;
+    const bounds = selectionBounds(startCell, cell);
+    paintSelection(null);
+    handlePlotSelection(bounds);
+  }
+
+  grid.addEventListener('pointerdown', (e) => {
+    const cell = cellFromEvent(e);
+    if (!cell) return;
+    dragging = true;
+    startCell = cell;
+    try { grid.setPointerCapture(e.pointerId); } catch (err) { /* e.g. synthetic/non-active pointer id */ }
+    paintSelection(selectionBounds(cell, cell));
+    e.preventDefault();
+  });
+
+  grid.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const cell = cellFromEvent(e);
+    if (!cell) return;
+    paintSelection(selectionBounds(startCell, cell));
+  });
+
+  grid.addEventListener('pointerup', endDrag);
+  grid.addEventListener('pointercancel', endDrag);
 }
 
-function openAddBoxModal() {
+function handlePlotSelection(bounds) {
+  const cells = [];
+  for (let y = bounds.y1; y <= bounds.y2; y++) {
+    for (let x = bounds.x1; x <= bounds.x2; x++) cells.push([x, y]);
+  }
+  if (cells.length === 1) {
+    const [x, y] = cells[0];
+    const existing = findObjectAt(x, y);
+    if (existing) {
+      if (existing.type === 'box') { openBoxEditor(existing.id); return; }
+      openObjectCellEditor(existing, x, y);
+      return;
+    }
+  }
+  openTypePicker(cells, null);
+}
+
+function openObjectCellEditor(obj, x, y) {
+  const label = OBJECT_TYPE_LABELS[obj.type] || obj.type;
+  let detail = '';
+  if (obj.type === 'trad') detail = `${(TREE_SPECIES[obj.kind] || []).find(s => s.id === obj.species)?.name || ''} · ${obj.height ?? '?'} m hög`;
+  else if (obj.type === 'buske') detail = `${BUSH_SPECIES.find(s => s.id === obj.species)?.name || ''}`;
+  else if (obj.type === 'byggnad' || obj.type === 'hack') detail = `${obj.height ?? '?'} m hög`;
+
   const html = `
-    <p class="modal-title">Lägg till låda</p>
+    <p class="modal-title">${label}</p>
+    <p class="modal-sub">${detail}${detail ? ' · ' : ''}Ruta (${x},${y}) av ${obj.cells.length} totalt</p>
     <div class="modal-section">
-      <p class="modal-section-title">Namn (valfritt)</p>
-      <input type="text" id="new-box-name" placeholder="Lämna tomt för automatiskt namn"
-        style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem">
+      <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="obj-edit-whole-btn">Redigera hela objektet</button>
     </div>
     <div class="modal-section">
-      <p class="modal-section-title">Var ligger den?</p>
-      <select class="crop-picker" id="new-box-zone">
-        <option value="skugga">🌓 Vid häcken (skugga till förmiddag)</option>
-        <option value="sol">☀️ Soliga läget (sol hela dagen)</option>
-      </select>
-    </div>
-    <div class="modal-section">
-      <p class="modal-section-title">Vilka lådor ligger den nära? (valfritt)</p>
-      <div id="neighbor-rows"></div>
-      <button type="button" class="chip" id="neighbor-add-btn">+ Lägg till granne</button>
-    </div>
-    <div class="modal-section">
-      <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="new-box-save-btn">Lägg till</button>
+      <button class="chip" style="width:100%;padding:10px;font-size:0.9rem" id="obj-remove-cell-btn">Ta bort bara denna ruta</button>
     </div>
   `;
   document.getElementById('modal-content').innerHTML = html;
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 
-  const neighborPicker = wireNeighborPicker('neighbor-rows', 'neighbor-add-btn', undefined, []);
+  document.getElementById('obj-edit-whole-btn').addEventListener('click', () => openTypePicker(obj.cells, obj));
+  document.getElementById('obj-remove-cell-btn').addEventListener('click', () => removeCellFromObject(obj.id, x, y));
+}
 
-  document.getElementById('new-box-save-btn').addEventListener('click', () => {
-    const zone = document.getElementById('new-box-zone').value;
-    const name = document.getElementById('new-box-name').value.trim();
-    const neighborIds = neighborPicker.getSelectedIds();
-    const newId = addBox(zone, name);
-    if (neighborIds.length) setBoxNeighbors(newId, neighborIds);
-    saveState();
-    render();
+function openTypePicker(cells, existingObject) {
+  const currentType = existingObject ? existingObject.type : '';
+  const cellsLabel = cells.length === 1 ? `Ruta (${cells[0][0]},${cells[0][1]})` : `${cells.length} rutor valda`;
+
+  const html = `
+    <p class="modal-title">${existingObject ? 'Redigera objekt' : 'Lägg till'}</p>
+    <p class="modal-sub">${cellsLabel}</p>
+    <div class="modal-section">
+      <p class="modal-section-title">Vad finns här?</p>
+      <div class="type-grid" id="type-grid">
+        ${Object.entries(OBJECT_TYPE_LABELS).map(([key, label]) => `
+          <button type="button" class="type-btn ${key === currentType ? 'active' : ''}" data-type="${key}">${label}</button>
+        `).join('')}
+      </div>
+    </div>
+    <div id="type-extra-fields"></div>
+    <div class="modal-section">
+      <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="type-confirm-btn">Spara</button>
+    </div>
+    ${existingObject ? `<div class="modal-section"><button style="width:100%;padding:10px;font-size:0.85rem;background:none;border:none;color:#922B21;font-family:'Inter',sans-serif" id="type-delete-btn">Ta bort hela objektet</button></div>` : ''}
+  `;
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  let selectedType = currentType;
+
+  function renderExtraFields() {
+    const slot = document.getElementById('type-extra-fields');
+    if (selectedType === 'trad') {
+      const kind = existingObject?.kind || 'frukt';
+      slot.innerHTML = `
+        <div class="modal-section">
+          <p class="modal-section-title">Typ av träd</p>
+          <select class="crop-picker" id="tree-kind-select">
+            <option value="frukt" ${kind === 'frukt' ? 'selected' : ''}>Fruktträd</option>
+            <option value="ickefrukt" ${kind === 'ickefrukt' ? 'selected' : ''}>Icke-fruktträd</option>
+          </select>
+          <p class="modal-section-title" style="margin-top:12px">Art</p>
+          <select class="crop-picker" id="tree-species-select"></select>
+          <p class="modal-section-title" style="margin-top:12px">Höjd (m)</p>
+          <input type="number" id="tree-height-input" min="0" step="0.5" value="${existingObject?.height ?? 3}" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem">
+        </div>
+      `;
+      const kindSelect = document.getElementById('tree-kind-select');
+      const speciesSelect = document.getElementById('tree-species-select');
+      function refreshSpeciesOptions() {
+        const list = TREE_SPECIES[kindSelect.value] || [];
+        const currentSpecies = existingObject?.species;
+        speciesSelect.innerHTML = list.map(s => `<option value="${s.id}" ${s.id === currentSpecies ? 'selected' : ''}>${s.name}</option>`).join('');
+      }
+      kindSelect.addEventListener('change', refreshSpeciesOptions);
+      refreshSpeciesOptions();
+    } else if (selectedType === 'buske') {
+      const currentSpecies = existingObject?.species;
+      slot.innerHTML = `
+        <div class="modal-section">
+          <p class="modal-section-title">Art</p>
+          <select class="crop-picker" id="bush-species-select">
+            ${BUSH_SPECIES.map(s => `<option value="${s.id}" ${s.id === currentSpecies ? 'selected' : ''}>${s.name}</option>`).join('')}
+          </select>
+        </div>
+      `;
+    } else if (selectedType === 'byggnad' || selectedType === 'hack') {
+      slot.innerHTML = `
+        <div class="modal-section">
+          <p class="modal-section-title">Höjd (m)</p>
+          <input type="number" id="obj-height-input" min="0" step="0.5" value="${existingObject?.height ?? (selectedType === 'hack' ? 1.5 : 6)}" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem">
+        </div>
+      `;
+    } else if (selectedType === 'box') {
+      slot.innerHTML = `
+        <div class="modal-section">
+          <p class="modal-section-title">Namn (valfritt)</p>
+          <input type="text" id="box-name-input" placeholder="Lämna tomt för automatiskt namn" value="${existingObject?.name || ''}" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem">
+        </div>
+      `;
+    } else {
+      slot.innerHTML = '';
+    }
+  }
+  renderExtraFields();
+
+  document.querySelectorAll('#type-grid .type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedType = btn.dataset.type;
+      document.querySelectorAll('#type-grid .type-btn').forEach(b => b.classList.toggle('active', b === btn));
+      renderExtraFields();
+    });
+  });
+
+  document.getElementById('type-confirm-btn').addEventListener('click', () => {
+    if (!selectedType) { alert('Välj vad som finns här.'); return; }
+    const props = {};
+    if (selectedType === 'trad') {
+      props.kind = document.getElementById('tree-kind-select').value;
+      props.species = document.getElementById('tree-species-select').value;
+      props.height = Number(document.getElementById('tree-height-input').value) || 0;
+    } else if (selectedType === 'buske') {
+      props.species = document.getElementById('bush-species-select').value;
+    } else if (selectedType === 'byggnad' || selectedType === 'hack') {
+      props.height = Number(document.getElementById('obj-height-input').value) || 0;
+    } else if (selectedType === 'box') {
+      const name = document.getElementById('box-name-input').value.trim();
+      props.name = name || `Låda ${state.objects.filter(o => o.type === 'box').length + 1}`;
+    }
+
+    if (existingObject) updateObjectInPlace(existingObject.id, selectedType, props);
+    else addObject(selectedType, cells, props);
     closeModal();
+    render();
   });
-}
 
-function addBox(zone, name) {
-  const existingCount = state.boxDefs.filter(b => b.zone === zone).length;
-  const id = `${zone}-${Date.now()}`;
-  const autoName = zone === 'sol' ? `Soliga ${existingCount + 1}` : `Häcken ${existingCount + 1}`;
-  state.boxDefs.push({ id, zone, name: name || autoName, neighbors: [] });
-  saveState();
-  render();
-  return id;
-}
-
-function removeBox(boxId) {
-  if (!confirm('Ta bort den här lådan? Det här går inte att ångra.')) return;
-  state.boxDefs.forEach(b => {
-    if (b.neighbors) b.neighbors = b.neighbors.filter(id => id !== boxId);
-  });
-  state.boxDefs = state.boxDefs.filter(b => b.id !== boxId);
-  delete state.boxes[boxId];
-  saveState();
-  closeModal();
-  render();
+  const deleteBtn = document.getElementById('type-delete-btn');
+  if (deleteBtn) deleteBtn.addEventListener('click', () => removeWholeObject(existingObject.id));
 }
 
 function openBoxEditor(boxId) {
-  const box = state.boxDefs.find(b => b.id === boxId);
+  const box = state.objects.find(o => o.id === boxId);
+  if (!box) return;
 
   const html = `
     <p class="modal-title">${box.name}</p>
-    <p class="modal-sub">${box.zone === 'sol' ? '☀️ Sol hela dagen' : '🌓 Skugga till förmiddag'}</p>
+    <p class="modal-sub">${box.cells.length} ruta${box.cells.length > 1 ? 'or' : ''} · (${box.cells.map(c => c.join(',')).join('), (')})</p>
     <button type="button" class="chip" id="history-btn" style="margin-bottom:14px">📜 Historik</button>
     <div id="rotation-recs-slot"></div>
     <div class="modal-section">
@@ -717,11 +846,6 @@ function openBoxEditor(boxId) {
       <button type="button" class="chip" id="crop-add-btn">+ Lägg till gröda</button>
     </div>
     <div id="box-warning-slot"></div>
-    <div class="modal-section">
-      <p class="modal-section-title">Vilka lådor ligger den nära?</p>
-      <div id="neighbor-rows"></div>
-      <button type="button" class="chip" id="neighbor-add-btn">+ Lägg till granne</button>
-    </div>
     <div class="modal-section">
       <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="box-save-btn">Spara</button>
     </div>
@@ -735,8 +859,7 @@ function openBoxEditor(boxId) {
 
   const warningSlot = document.getElementById('box-warning-slot');
   const recsSlot = document.getElementById('rotation-recs-slot');
-  // declared first so the shared callbacks can safely no-op while both pickers are still being built
-  let cropPicker, neighborPicker;
+  let cropPicker; // declared first so callbacks can safely no-op while it's still being built
 
   function updateRecommendations() {
     if (!cropPicker) return;
@@ -759,23 +882,23 @@ function openBoxEditor(boxId) {
     recsSlot.querySelectorAll('.rec-add-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         cropPicker.addCropDirectly(btn.dataset.recId);
-        onCropOrNeighborChange();
+        onCropChange();
       });
     });
   }
 
-  function onCropOrNeighborChange() {
+  function onCropChange() {
     updateWarning();
     updateRecommendations();
   }
 
+  // Cross-box companion warnings (based on real grid distance) return once
+  // Phase B ships; for now this only checks conflicts within the box itself.
   function updateWarning() {
-    if (!cropPicker || !neighborPicker) return;
+    if (!cropPicker) return;
     const ownEntries = cropPicker.getSelectedIds();
     const ownCropIds = ownEntries.map(e => e.cropId);
-    const neighborCropIds = neighborPicker.getSelectedIds().flatMap(id => getBoxCrops(id).map(e => e.cropId));
     const warnings = [];
-    const tips = [];
 
     const fillers = ownCropIds.filter(id => CROPS[id].fillsBox);
     if (fillers.length && ownCropIds.length > fillers.length) {
@@ -793,27 +916,16 @@ function openBoxEditor(boxId) {
       }
     }
 
-    ownCropIds.forEach(ownId => {
-      const crop = CROPS[ownId];
-      (crop.companionBad || []).filter(id => neighborCropIds.includes(id))
-        .forEach(badId => warnings.push(`${crop.name} trivs inte bra bredvid ${CROP_LABELS[badId]}, som odlas i en angränsande låda.`));
-      (crop.companionGood || []).filter(id => neighborCropIds.includes(id))
-        .forEach(goodId => tips.push(`${crop.name} trivs bra tillsammans med ${CROP_LABELS[goodId]}, som odlas i en angränsande låda.`));
-    });
-
     ownEntries.forEach(entry => {
       const lateWarning = checkSowingLateness(CROPS[entry.cropId], entry.plantedDate);
       if (lateWarning) warnings.push(lateWarning);
     });
 
-    warningSlot.innerHTML =
-      warnings.map(w => `<div class="modal-warning">⚠️ ${w}</div>`).join('') +
-      tips.map(t => `<div class="modal-tip">✓ ${t}</div>`).join('');
+    warningSlot.innerHTML = warnings.map(w => `<div class="modal-warning">⚠️ ${w}</div>`).join('');
   }
 
-  cropPicker = wireCropPicker('crop-rows', 'crop-add-btn', getBoxCrops(boxId), box.zone, onCropOrNeighborChange);
-  neighborPicker = wireNeighborPicker('neighbor-rows', 'neighbor-add-btn', boxId, getBoxNeighbors(boxId), onCropOrNeighborChange);
-  onCropOrNeighborChange();
+  cropPicker = wireCropPicker('crop-rows', 'crop-add-btn', getBoxCrops(boxId), null, onCropChange);
+  onCropChange();
 
   document.getElementById('box-save-btn').addEventListener('click', () => {
     const boxEntry = ensureBoxEntry(boxId);
@@ -822,15 +934,13 @@ function openBoxEditor(boxId) {
     cropPicker.getPendingHarvests().forEach(entry => {
       boxEntry.history.push({ cropId: entry.cropId, plantedDate: entry.plantedDate, harvestedDate, note: entry.note });
     });
-    setBoxNeighbors(boxId, neighborPicker.getSelectedIds());
     saveState();
     closeModal();
     render();
   });
 
   document.getElementById('history-btn').addEventListener('click', () => openBoxHistory(boxId));
-
-  document.getElementById('box-delete-btn').addEventListener('click', () => removeBox(boxId));
+  document.getElementById('box-delete-btn').addEventListener('click', () => removeWholeObject(boxId));
 }
 
 // ---------- GRÖDOR ----------
@@ -1065,11 +1175,6 @@ function attachViewHandlers() {
   document.querySelectorAll('.crop-row[data-berry]').forEach(el => {
     el.addEventListener('click', () => openBerryModal(el.dataset.berry));
   });
-  document.querySelectorAll('.box-tile[data-box]').forEach(el => {
-    el.addEventListener('click', () => openBoxEditor(el.dataset.box));
-  });
-  const addBoxBtn = document.getElementById('add-box-btn');
-  if (addBoxBtn) addBoxBtn.addEventListener('click', openAddBoxModal);
   document.querySelectorAll('.chip[data-filter-key]').forEach(el => {
     el.addEventListener('click', () => {
       cropFilter[el.dataset.filterKey] = el.dataset.filterValue;
@@ -1101,6 +1206,23 @@ function attachViewHandlers() {
     if (importFileInput.files[0]) importDataFile(importFileInput.files[0]);
     importFileInput.value = '';
   });
+
+  const plotSetupBtn = document.getElementById('plot-setup-btn');
+  if (plotSetupBtn) plotSetupBtn.addEventListener('click', () => {
+    const w = Math.max(1, Math.min(MAX_PLOT_DIM, Math.round(Number(document.getElementById('plot-width-input').value)) || 0));
+    const h = Math.max(1, Math.min(MAX_PLOT_DIM, Math.round(Number(document.getElementById('plot-height-input').value)) || 0));
+    const lat = Number(document.getElementById('plot-lat-input').value) || 59.8;
+    if (!w || !h) { alert('Ange giltiga mått.'); return; }
+    state.plot = { width: w, height: h, latitude: lat };
+    state.objects = [];
+    saveState();
+    render();
+  });
+
+  const zoomInBtn = document.getElementById('plot-zoom-in');
+  const zoomOutBtn = document.getElementById('plot-zoom-out');
+  if (zoomInBtn) zoomInBtn.addEventListener('click', () => { plotZoom = Math.min(48, plotZoom + 6); render(); });
+  if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => { plotZoom = Math.max(14, plotZoom - 6); render(); });
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -146,30 +146,6 @@ h1, h2, h3 {
   color: white;
 }
 
-/* ── BOX GRID ── */
-.box-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-.box-tile {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
-  text-align: left;
-  font-family: 'Inter', sans-serif;
-  min-height: 84px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-.box-tile .box-name { font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
-.box-tile .box-crop { font-size: 0.95rem; font-weight: 600; margin-top: 6px; color: var(--ink); }
-.box-tile .box-crop.empty { color: var(--muted); font-weight: 400; font-style: italic; }
-.box-tile.zone-sol { border-top: 3px solid var(--harvest); }
-.box-tile.zone-skugga { border-top: 3px solid var(--moss); }
-
 /* ── MODAL ── */
 .modal-overlay {
   display: none;
@@ -289,22 +265,6 @@ select.crop-picker {
   color: var(--muted);
   text-align: center;
   margin-top: 4px;
-}
-
-.neighbor-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.neighbor-row select { flex: 1; margin-top: 0; }
-.neighbor-remove-btn {
-  background: none;
-  border: none;
-  color: #922B21;
-  font-size: 1.1rem;
-  padding: 6px 10px;
-  flex-shrink: 0;
 }
 
 .crop-picker-row {
@@ -520,4 +480,79 @@ table.schedule .crop-name-cell {
 table.schedule .cell {
   padding: 6px 6px;
   font-size: 0.68rem;
+}
+
+/* ── TOMT (plot grid) ── */
+.plot-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.plot-zoom-controls { display: flex; gap: 6px; }
+.plot-zoom-controls .chip { padding: 6px 14px; font-size: 0.95rem; font-weight: 700; }
+.plot-compass-line {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.plot-grid-scroll {
+  overflow: auto;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  -webkit-overflow-scrolling: touch;
+}
+.plot-grid {
+  display: grid;
+  gap: 1px;
+  background: var(--border);
+  width: max-content;
+}
+.plot-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #EAF3DE;
+  font-size: 0.85em;
+  line-height: 1;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.plot-cell-gras { background: #EAF3DE; }
+.plot-cell-trad { background: #B7D9A8; }
+.plot-cell-buske { background: #CFE3B0; }
+.plot-cell-sten { background: #D9D5CC; }
+.plot-cell-grusgang { background: #E7DFCC; }
+.plot-cell-byggnad { background: #C9AE9A; }
+.plot-cell-hack { background: #7FA06A; }
+.plot-cell-box { background: #F0C989; }
+.plot-cell-selected {
+  outline: 2px solid var(--moss);
+  outline-offset: -2px;
+  filter: brightness(0.92);
+}
+
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.type-btn {
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 0.82rem;
+  font-family: 'Inter', sans-serif;
+  color: var(--ink);
+  text-align: left;
+}
+.type-btn.active {
+  background: var(--moss);
+  border-color: var(--moss);
+  color: white;
 }

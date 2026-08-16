@@ -1,4 +1,4 @@
-const CACHE_NAME = 'odlingsapp-v2';
+const CACHE_NAME = 'odlingsapp-v3';
 const ASSETS = [
   './',
   './index.html',

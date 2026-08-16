@@ -1,5 +1,38 @@
-// Statisk uppsättning av dina odlingslådor. Ändra siffrorna här om antalet lådor ändras.
-const BOX_CONFIG = [
-  ...Array.from({ length: 7 }, (_, i) => ({ id: `skugga-${i + 1}`, zone: 'skugga', name: `Häcken ${i + 1}` })),
-  ...Array.from({ length: 4 }, (_, i) => ({ id: `sol-${i + 1}`, zone: 'sol', name: `Soliga ${i + 1}` }))
+// Static option lists for the plot grid's type-picker. Species content here
+// is intentionally minimal (labels only) - full care-info cards for trees
+// and additional bushes are later work, not needed for placing objects.
+
+const OBJECT_TYPE_LABELS = {
+  gras: '🌱 Gräs', trad: '🌳 Träd', buske: '🫐 Buske', sten: '🪨 Sten',
+  grusgang: '⬜ Grusgång/sten', byggnad: '🏠 Byggnad', hack: '🌲 Häck', box: '📦 Odlingslåda'
+};
+
+const TREE_SPECIES = {
+  frukt: [
+    { id: 'appel', name: 'Äppelträd' },
+    { id: 'paron', name: 'Päronträd' },
+    { id: 'plommon', name: 'Plommonträd' },
+    { id: 'korsbar', name: 'Körsbärsträd' },
+    { id: 'krikon', name: 'Krikonträd' }
+  ],
+  ickefrukt: [
+    { id: 'bjork', name: 'Björk' },
+    { id: 'gran', name: 'Gran' },
+    { id: 'tall', name: 'Tall' },
+    { id: 'lonn', name: 'Lönn' },
+    { id: 'ek', name: 'Ek' },
+    { id: 'valnot', name: 'Valnöt' },
+    { id: 'ovrigt', name: 'Övrigt träd' }
+  ]
+};
+
+// Reuses BERRIES ids where a fruiting bush already has a full guide entry
+// (see berries.js); "ovrigt" covers purely ornamental bushes.
+const BUSH_SPECIES = [
+  { id: 'rodavinbar', name: 'Röda vinbär' },
+  { id: 'vitavinbar', name: 'Vita vinbär' },
+  { id: 'krusbar', name: 'Krusbär' },
+  { id: 'hallon', name: 'Hallon' },
+  { id: 'aronia', name: 'Aronia' },
+  { id: 'ovrigt', name: 'Övrig/prydnadsbuske' }
 ];
