@@ -535,6 +535,13 @@ table.schedule .cell {
   filter: brightness(0.92);
 }
 
+/* Outline only the outer boundary of a multi-cell object, so it reads as
+   one contiguous shape rather than a checkerboard of same-color tiles. */
+.plot-cell.plot-edge-n { border-top: 2px solid rgba(28,28,26,0.55); }
+.plot-cell.plot-edge-s { border-bottom: 2px solid rgba(28,28,26,0.55); }
+.plot-cell.plot-edge-w { border-left: 2px solid rgba(28,28,26,0.55); }
+.plot-cell.plot-edge-e { border-right: 2px solid rgba(28,28,26,0.55); }
+
 .type-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

@@ -576,15 +576,57 @@ function renderPlotSetup() {
   `;
 }
 
+const TREE_ICON = {
+  appel: '🍎', paron: '🍐', plommon: '🍑', korsbar: '🍒', krikon: '🍇',
+  bjork: '🌳', gran: '🌲', tall: '🌲', lonn: '🍁', ek: '🌳', valnot: '🌰', ovrigt: '🌳'
+};
+
+function objectIcon(obj) {
+  if (obj.type === 'trad') return TREE_ICON[obj.species] || '🌳';
+  return (OBJECT_TYPE_LABELS[obj.type] || '').split(' ')[0];
+}
+
+// The cell of an object's own footprint closest to its centroid, so the
+// single icon lands on real ground rather than an empty gap in an L-shape.
+function objectIconCellKey(obj) {
+  const avgX = obj.cells.reduce((s, [x]) => s + x, 0) / obj.cells.length;
+  const avgY = obj.cells.reduce((s, [, y]) => s + y, 0) / obj.cells.length;
+  let best = obj.cells[0], bestDist = Infinity;
+  obj.cells.forEach(([x, y]) => {
+    const d = (x - avgX) ** 2 + (y - avgY) ** 2;
+    if (d < bestDist) { bestDist = d; best = [x, y]; }
+  });
+  return `${best[0]},${best[1]}`;
+}
+
+// Borders only on edges where the neighboring cell belongs to a *different*
+// object (or nothing) - this is what makes a multi-cell object read as one
+// contiguous shape with an outline, instead of a checkerboard of same-color tiles.
+function edgeClasses(x, y, obj) {
+  if (!obj || obj.type === 'gras') return '';
+  const sameObjAt = (nx, ny) => obj.cells.some(([cx, cy]) => cx === nx && cy === ny);
+  const classes = [];
+  if (!sameObjAt(x, y + 1)) classes.push('plot-edge-n');
+  if (!sameObjAt(x, y - 1)) classes.push('plot-edge-s');
+  if (!sameObjAt(x - 1, y)) classes.push('plot-edge-w');
+  if (!sameObjAt(x + 1, y)) classes.push('plot-edge-e');
+  return classes.join(' ');
+}
+
 function renderPlotGrid() {
   const { width, height } = state.plot;
+  const iconCellByObjId = {};
+  state.objects.forEach(o => { iconCellByObjId[o.id] = objectIconCellKey(o); });
+
   let cellsHtml = '';
   for (let y = height; y >= 1; y--) {
     for (let x = 1; x <= width; x++) {
       const obj = findObjectAt(x, y);
       const typeClass = `plot-cell-${obj ? obj.type : 'gras'}`;
-      const icon = obj ? (OBJECT_TYPE_LABELS[obj.type] || '').split(' ')[0] : '';
-      cellsHtml += `<div class="plot-cell ${typeClass}" data-x="${x}" data-y="${y}">${icon}</div>`;
+      const showIcon = obj && iconCellByObjId[obj.id] === `${x},${y}`;
+      const icon = showIcon ? objectIcon(obj) : '';
+      const edges = edgeClasses(x, y, obj);
+      cellsHtml += `<div class="plot-cell ${typeClass} ${edges}" data-x="${x}" data-y="${y}">${icon}</div>`;
     }
   }
   return `
