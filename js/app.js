@@ -47,6 +47,20 @@ function findObjectAt(x, y) {
   return state.objects.find(o => o.cells.some(([cx, cy]) => cx === x && cy === y));
 }
 
+// Shortest distance (in meters, since 1 cell = 1m) between any cell of one
+// object and any cell of another - the real-geometry replacement for the
+// old manually-curated neighbor list.
+function minDistanceBetweenObjects(objA, objB) {
+  let min = Infinity;
+  objA.cells.forEach(([ax, ay]) => {
+    objB.cells.forEach(([bx, by]) => {
+      const d = Math.hypot(ax - bx, ay - by);
+      if (d < min) min = d;
+    });
+  });
+  return min;
+}
+
 function addObject(type, cells, props) {
   const id = `obj-${Date.now()}`;
   state.objects.push({ id, type, cells, ...props });
@@ -941,6 +955,7 @@ function openBoxEditor(boxId) {
     const ownEntries = cropPicker.getSelectedIds();
     const ownCropIds = ownEntries.map(e => e.cropId);
     const warnings = [];
+    const tips = [];
 
     const fillers = ownCropIds.filter(id => CROPS[id].fillsBox);
     if (fillers.length && ownCropIds.length > fillers.length) {
@@ -958,12 +973,37 @@ function openBoxEditor(boxId) {
       }
     }
 
+    // Cross-box: real grid distance against whichever crop's effectRadius
+    // reaches furthest, instead of a manually-picked neighbor list.
+    const otherBoxes = state.objects.filter(o => o.type === 'box' && o.id !== boxId);
+    otherBoxes.forEach(otherBox => {
+      const otherCropIds = getBoxCrops(otherBox.id).map(e => e.cropId);
+      if (!otherCropIds.length) return;
+      const dist = minDistanceBetweenObjects(box, otherBox);
+      ownCropIds.forEach(myId => {
+        const myCrop = CROPS[myId];
+        otherCropIds.forEach(otherId => {
+          const otherCrop = CROPS[otherId];
+          const radius = Math.max(myCrop.effectRadius ?? 1, otherCrop.effectRadius ?? 1);
+          if (dist > radius) return;
+          const distLabel = dist < 0.1 ? 'i angränsande låda' : `~${dist.toFixed(1)} m bort`;
+          if ((myCrop.companionBad || []).includes(otherId)) {
+            warnings.push(`${myCrop.name} trivs inte bra nära ${otherCrop.name} (${otherBox.name}, ${distLabel}).`);
+          } else if ((myCrop.companionGood || []).includes(otherId)) {
+            tips.push(`${myCrop.name} trivs bra nära ${otherCrop.name} (${otherBox.name}, ${distLabel}).`);
+          }
+        });
+      });
+    });
+
     ownEntries.forEach(entry => {
       const lateWarning = checkSowingLateness(CROPS[entry.cropId], entry.plantedDate);
       if (lateWarning) warnings.push(lateWarning);
     });
 
-    warningSlot.innerHTML = warnings.map(w => `<div class="modal-warning">⚠️ ${w}</div>`).join('');
+    warningSlot.innerHTML =
+      warnings.map(w => `<div class="modal-warning">⚠️ ${w}</div>`).join('') +
+      tips.map(t => `<div class="modal-tip">✓ ${t}</div>`).join('');
   }
 
   cropPicker = wireCropPicker('crop-rows', 'crop-add-btn', getBoxCrops(boxId), null, onCropChange);

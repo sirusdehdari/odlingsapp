@@ -1,5 +1,9 @@
 // Grödbank för odlingsappen. zone: 'skugga' | 'sol' | 'valfri'. maintenance: 'latt' | 'medel' | 'krav'.
 // perioder-index motsvarar kolumnerna: [Apr-Maj, Jun, Jul, Aug, Sep-Okt, Nov-Mar]
+// effectRadius: hur många meter bort companionGood/companionBad räknas som "nära nog"
+// för att slå ut en varning mot en annan låda (avstånd mäts mellan lådornas rutor).
+// Utelämnad = standard 1 m (bara direkt intilliggande lådor). Höjs bara för ett fåtal
+// väletablerade fall (doftstarka pollinerar-lockare) - ingen exakt vetenskap.
 const CROPS = {
 
   // ---------- SKUGGZON (7 lådor vid häcken) ----------
@@ -439,7 +443,7 @@ const CROPS = {
 
   basilika: {
     name: 'Basilika', sub: 'Aromatisk · Antioxidanter · K-vitamin',
-    zone: 'sol', maintenance: 'medel',
+    zone: 'sol', maintenance: 'medel', effectRadius: 2,
     growth: { harvestDays: [30, 45] },
     family: 'kransblommig', feederType: 'light',
     perioder: [
@@ -456,7 +460,7 @@ const CROPS = {
 
   timjan: {
     name: 'Timjan', sub: 'Aromatisk · Perenn · Antioxidanter',
-    zone: 'sol', maintenance: 'latt',
+    zone: 'sol', maintenance: 'latt', effectRadius: 2,
     growth: { harvestDays: [30, 45] },
     family: 'kransblommig', feederType: 'light',
     perioder: [
@@ -473,7 +477,7 @@ const CROPS = {
 
   oregano: {
     name: 'Oregano', sub: 'Aromatisk · Perenn · Antioxidanter',
-    zone: 'sol', maintenance: 'latt',
+    zone: 'sol', maintenance: 'latt', effectRadius: 2,
     growth: { harvestDays: [30, 45] },
     family: 'kransblommig', feederType: 'light',
     perioder: [
@@ -490,7 +494,7 @@ const CROPS = {
 
   graslok: {
     name: 'Gräslök', sub: 'Aromatisk · Perenn · K-vitamin',
-    zone: 'valfri', maintenance: 'latt',
+    zone: 'valfri', maintenance: 'latt', effectRadius: 2,
     growth: { germinateDays: [10, 14], harvestDays: [30, 45] },
     family: 'lok', feederType: 'light',
     perioder: [
@@ -524,7 +528,7 @@ const CROPS = {
 
   dill: {
     name: 'Dill', sub: 'Aromatisk · C-vitamin · Antioxidanter',
-    zone: 'valfri', maintenance: 'latt',
+    zone: 'valfri', maintenance: 'latt', effectRadius: 2,
     growth: { germinateDays: [10, 14], harvestDays: [40, 55] },
     family: 'flockblommig', feederType: 'light',
     perioder: [
