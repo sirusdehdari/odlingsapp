@@ -504,6 +504,19 @@ table.schedule .cell {
   color: #8B3A2E;
   border-color: #8B3A2E;
 }
+.plot-expand-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #EAF3DE;
+  border: 1px solid var(--moss);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  margin-bottom: 10px;
+}
+.plot-expand-banner .chip { padding: 4px 10px; font-size: 0.72rem; flex-shrink: 0; }
 .plot-compass-line {
   font-size: 0.78rem;
   color: var(--muted);
@@ -540,6 +553,7 @@ table.schedule .cell {
 .plot-cell-sten { background: #D9D5CC; }
 .plot-cell-grusgang { background: #E7DFCC; }
 .plot-cell-byggnad { background: #C9AE9A; }
+.plot-cell-altan { background: #D3A876; }
 .plot-cell-hack { background: #7FA06A; }
 .plot-cell-box { background: #F0C989; }
 .plot-cell-selected {

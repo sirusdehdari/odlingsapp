@@ -10,6 +10,7 @@ const MAX_CROPS_PER_BOX = 4;
 let state = loadState();
 let plotZoom = 26; // px per grid cell, adjustable via +/- controls
 let sunFilterOn = false; // toggles the sol/skugga map overlay
+let expandingObjectId = null; // set while the next selection should be merged into an existing object instead of creating a new one
 
 // v2: state = { plot: {width,height,latitude} | null, objects: [...], boxes: {...} }.
 // No migration from the old box-list model - the user explicitly asked to
@@ -902,6 +903,12 @@ function iconModeFor(type) {
   return 'center';
 }
 
+function expandLabelForObject(objectId) {
+  const obj = state.objects.find(o => o.id === objectId);
+  if (!obj) return '';
+  return obj.type === 'box' ? obj.name : (OBJECT_TYPE_LABELS[obj.type] || obj.type);
+}
+
 function renderPlotGrid() {
   const { width, height } = state.plot;
   const iconCellByObjId = {};
@@ -940,6 +947,12 @@ function renderPlotGrid() {
     </div>
     <p class="plot-compass-line">🧭 N (upp) · S (ner) · V (vänster) · Ö (höger)</p>
     <p style="font-size:0.78rem;color:var(--muted);margin-bottom:10px">Dra över flera rutor för att markera ett område, tryck på en ruta för att redigera den.</p>
+    ${expandingObjectId ? `
+    <div class="plot-expand-banner">
+      <span>➕ Expanderar <b>${expandLabelForObject(expandingObjectId)}</b> - markera tomma rutor att lägga till.</span>
+      <button type="button" class="chip" id="plot-expand-cancel-btn">Avbryt</button>
+    </div>
+    ` : ''}
     ${sunFilterOn ? `
     <div class="plot-sun-legend">
       <span><i class="sun-swatch sun-swatch-sol"></i>Full sol</span>
@@ -1028,6 +1041,12 @@ function handlePlotSelection(bounds) {
   for (let y = bounds.y1; y <= bounds.y2; y++) {
     for (let x = bounds.x1; x <= bounds.x2; x++) cells.push([x, y]);
   }
+
+  if (expandingObjectId) {
+    expandSelectionIntoObject(cells);
+    return;
+  }
+
   if (cells.length === 1) {
     const [x, y] = cells[0];
     const existing = findObjectAt(x, y);
@@ -1051,6 +1070,30 @@ function handlePlotSelection(bounds) {
   openTypePicker(cells, null);
 }
 
+// Merges newly-selected cells into an existing object's footprint (same type
+// and properties, just bigger) instead of creating a separate touching
+// object. Cells already owned by the target object are silently skipped
+// (so dragging a box that overlaps the object's own corner still works);
+// cells owned by a *different* object still block, same as a normal drag.
+function expandSelectionIntoObject(cells) {
+  const obj = state.objects.find(o => o.id === expandingObjectId);
+  expandingObjectId = null; // always leave expand mode, even on failure, so the UI never gets stuck
+  if (!obj) { render(); return; }
+
+  const newCells = cells.filter(([x, y]) => !obj.cells.some(([ox, oy]) => ox === x && oy === y));
+  const blockedBy = newCells.filter(([x, y]) => findObjectAt(x, y));
+  if (blockedBy.length) {
+    alert(`${blockedBy.length} av de nya rutorna har redan något annat placerat. Markera bara tomma rutor att lägga till.`);
+    render();
+    return;
+  }
+  if (!newCells.length) { render(); return; }
+
+  obj.cells.push(...newCells);
+  saveState();
+  render();
+}
+
 function openObjectCellEditor(obj, x, y) {
   const label = OBJECT_TYPE_LABELS[obj.type] || obj.type;
   let detail = '';
@@ -1065,6 +1108,9 @@ function openObjectCellEditor(obj, x, y) {
       <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="obj-edit-whole-btn">Redigera hela objektet</button>
     </div>
     <div class="modal-section">
+      <button class="chip" style="width:100%;padding:10px;font-size:0.9rem" id="obj-expand-btn">➕ Expandera det här objektet</button>
+    </div>
+    <div class="modal-section">
       <button class="chip" style="width:100%;padding:10px;font-size:0.9rem" id="obj-remove-cell-btn">Ta bort bara denna ruta</button>
     </div>
   `;
@@ -1073,6 +1119,11 @@ function openObjectCellEditor(obj, x, y) {
   document.body.style.overflow = 'hidden';
 
   document.getElementById('obj-edit-whole-btn').addEventListener('click', () => openTypePicker(obj.cells, obj));
+  document.getElementById('obj-expand-btn').addEventListener('click', () => {
+    expandingObjectId = obj.id;
+    closeModal();
+    render();
+  });
   document.getElementById('obj-remove-cell-btn').addEventListener('click', () => removeCellFromObject(obj.id, x, y));
 }
 
@@ -1620,6 +1671,9 @@ function attachViewHandlers() {
 
   const plotSunToggleBtn = document.getElementById('plot-sun-toggle-btn');
   if (plotSunToggleBtn) plotSunToggleBtn.addEventListener('click', () => { sunFilterOn = !sunFilterOn; render(); });
+
+  const plotExpandCancelBtn = document.getElementById('plot-expand-cancel-btn');
+  if (plotExpandCancelBtn) plotExpandCancelBtn.addEventListener('click', () => { expandingObjectId = null; render(); });
 
   const plotClearBtn = document.getElementById('plot-clear-btn');
   if (plotClearBtn) plotClearBtn.addEventListener('click', () => {

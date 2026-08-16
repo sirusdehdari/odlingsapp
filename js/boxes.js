@@ -4,7 +4,8 @@
 
 const OBJECT_TYPE_LABELS = {
   gras: '🌱 Gräs', trad: '🌳 Träd', buske: '🫐 Buske', sten: '🪨 Sten',
-  grusgang: '⬜ Grusgång/sten', byggnad: '🏠 Byggnad', hack: '🌲 Häck', box: '📦 Odlingslåda'
+  grusgang: '⬜ Grusgång/sten', byggnad: '🏠 Byggnad', altan: '🪵 Altan',
+  hack: '🌲 Häck', box: '📦 Odlingslåda'
 };
 
 const TREE_SPECIES = {
