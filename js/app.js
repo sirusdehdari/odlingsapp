@@ -590,6 +590,69 @@ function renderPlotSetup() {
   `;
 }
 
+// Lets an already-set-up plot's dimensions/latitude be corrected later (e.g.
+// a typo on first setup) without forcing a full "rensa tomten" first. Cells
+// that fall outside the new, smaller bounds are clipped from each object
+// (or the whole object dropped if nothing is left) - mirrors the same
+// partial-removal philosophy as removeCellFromObject, applied in bulk.
+function openPlotResizeModal() {
+  const { width, height, latitude } = state.plot;
+  const html = `
+    <p class="modal-title">Ändra tomtens mått</p>
+    <p class="modal-sub" style="font-size:0.85rem;color:var(--muted);line-height:1.6">
+      Om du gör tomten mindre kan objekt som hamnar utanför de nya måtten krympa eller försvinna helt.
+    </p>
+    <div class="modal-section">
+      <p class="modal-section-title">Bredd, X-led (m)</p>
+      <input type="number" id="plot-resize-width-input" min="1" max="${MAX_PLOT_DIM}" value="${width}" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:12px">
+      <p class="modal-section-title">Djup, Y-led (m)</p>
+      <input type="number" id="plot-resize-height-input" min="1" max="${MAX_PLOT_DIM}" value="${height}" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:12px">
+      <p class="modal-section-title">Ungefärlig latitud (grader nord)</p>
+      <input type="number" id="plot-resize-lat-input" step="0.1" value="${latitude}" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:16px">
+      <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="plot-resize-confirm-btn">Spara nya mått</button>
+    </div>
+  `;
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  document.getElementById('plot-resize-confirm-btn').addEventListener('click', () => {
+    const w = Math.max(1, Math.min(MAX_PLOT_DIM, Math.round(Number(document.getElementById('plot-resize-width-input').value)) || 0));
+    const h = Math.max(1, Math.min(MAX_PLOT_DIM, Math.round(Number(document.getElementById('plot-resize-height-input').value)) || 0));
+    const lat = Number(document.getElementById('plot-resize-lat-input').value) || 59.8;
+    if (!w || !h) { alert('Ange giltiga mått.'); return; }
+
+    const impacted = state.objects
+      .map(obj => ({ obj, newCells: obj.cells.filter(([x, y]) => x <= w && y <= h) }))
+      .filter(({ obj, newCells }) => newCells.length < obj.cells.length);
+
+    if (impacted.length) {
+      const removedBoxes = impacted.filter(({ obj, newCells }) => newCells.length === 0 && obj.type === 'box').length;
+      const removedOthers = impacted.filter(({ obj, newCells }) => newCells.length === 0 && obj.type !== 'box').length;
+      const shrunk = impacted.filter(({ newCells }) => newCells.length > 0).length;
+      const parts = [];
+      if (removedBoxes) parts.push(`${removedBoxes} låda/lådor tas bort helt (inklusive skörd-historik)`);
+      if (removedOthers) parts.push(`${removedOthers} annat objekt tas bort helt`);
+      if (shrunk) parts.push(`${shrunk} objekt krymper`);
+      if (!confirm(`De nya måtten är mindre på ett sätt som påverkar det du redan placerat: ${parts.join(', ')}. Fortsätta?`)) return;
+    }
+
+    impacted.forEach(({ obj, newCells }) => {
+      if (newCells.length === 0) {
+        state.objects = state.objects.filter(o => o.id !== obj.id);
+        if (obj.type === 'box') delete state.boxes[obj.id];
+      } else {
+        obj.cells = newCells;
+      }
+    });
+
+    state.plot = { width: w, height: h, latitude: lat };
+    saveState();
+    closeModal();
+    render();
+  });
+}
+
 const TREE_ICON = {
   appel: '🍎', paron: '🍐', plommon: '🍑', korsbar: '🍒', krikon: '🍇',
   bjork: '🌳', gran: '🌲', tall: '🌲', lonn: '🍁', ek: '🌳', valnot: '🌰', ovrigt: '🌳'
@@ -667,6 +730,7 @@ function renderPlotGrid() {
       <div class="plot-zoom-controls">
         <button type="button" class="chip" id="plot-zoom-out">−</button>
         <button type="button" class="chip" id="plot-zoom-in">+</button>
+        <button type="button" class="chip" id="plot-resize-btn">⚙️ Ändra mått</button>
         <button type="button" class="chip" id="plot-clear-btn">🗑️ Rensa tomten</button>
       </div>
     </div>
@@ -1335,6 +1399,9 @@ function attachViewHandlers() {
   const zoomOutBtn = document.getElementById('plot-zoom-out');
   if (zoomInBtn) zoomInBtn.addEventListener('click', () => { plotZoom = Math.min(48, plotZoom + 6); render(); });
   if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => { plotZoom = Math.max(14, plotZoom - 6); render(); });
+
+  const plotResizeBtn = document.getElementById('plot-resize-btn');
+  if (plotResizeBtn) plotResizeBtn.addEventListener('click', openPlotResizeModal);
 
   const plotClearBtn = document.getElementById('plot-clear-btn');
   if (plotClearBtn) plotClearBtn.addEventListener('click', () => {

@@ -493,10 +493,13 @@ table.schedule .cell {
 }
 .plot-zoom-controls { display: flex; align-items: center; gap: 6px; }
 .plot-zoom-controls .chip { padding: 6px 14px; font-size: 0.95rem; font-weight: 700; }
+.plot-zoom-controls #plot-resize-btn,
 .plot-zoom-controls #plot-clear-btn {
   padding: 6px 10px;
   font-size: 0.72rem;
   font-weight: 600;
+}
+.plot-zoom-controls #plot-clear-btn {
   color: #8B3A2E;
   border-color: #8B3A2E;
 }
