@@ -9,6 +9,7 @@ const MAX_CROPS_PER_BOX = 4;
 
 let state = loadState();
 let plotZoom = 26; // px per grid cell, adjustable via +/- controls
+let sunFilterOn = false; // toggles the sol/skugga map overlay
 
 // v2: state = { plot: {width,height,latitude} | null, objects: [...], boxes: {...} }.
 // No migration from the old box-list model - the user explicitly asked to
@@ -59,6 +60,161 @@ function minDistanceBetweenObjects(objA, objB) {
     });
   });
   return min;
+}
+
+// ---------- SOL/SKUGGA (approximate) ----------
+// Deliberately approximate, same philosophy as the growth-stage estimates:
+// a handful of representative sun positions across the growing season
+// rather than a continuous simulation, and no longitude/timezone handling
+// at all (we only ever collect latitude) - "solar hour" below just means
+// hours from solar noon, not real clock time. This is a seed-packet-level
+// estimate, not a precise shading tool, and is presented to the user as such.
+
+const SUN_SAMPLE_DATES = [
+  { label: 'apr', doy: 105 },  // ~15 apr
+  { label: 'maj', doy: 135 },  // ~15 maj
+  { label: 'jun', doy: 166 },  // ~15 jun, nära midsommar
+  { label: 'jul', doy: 196 },  // ~15 jul
+  { label: 'aug', doy: 227 },  // ~15 aug
+  { label: 'sep', doy: 258 },  // ~15 sep
+];
+const SUN_SAMPLE_HOURS = [8, 10, 12, 14, 16, 18]; // solar hours sampled per representative date
+const BUSH_DEFAULT_HEIGHT_M = 1.2; // bushes don't collect a height from the user, unlike träd/byggnad/hack
+const MIN_USEFUL_SUN_ELEVATION_DEG = 5; // below this the light is too grazing to matter for plants; sample is dropped, not counted as "shaded"
+const SHADOW_RAY_HALFWIDTH_M = 0.75; // how close to an obstruction cell's shadow centerline still counts as "in shadow"
+
+// Standard low-precision solar position formulas (declination via a single
+// sine term, hour angle from solar time). Good enough at the "which corner
+// of the garden gets more sun" level this feature targets.
+function solarPosition(latDeg, doy, solarHour) {
+  const lat = latDeg * Math.PI / 180;
+  const decl = 23.45 * Math.PI / 180 * Math.sin(2 * Math.PI * (284 + doy) / 365);
+  const hourAngle = (solarHour - 12) * 15 * Math.PI / 180;
+  const sinElev = Math.sin(lat) * Math.sin(decl) + Math.cos(lat) * Math.cos(decl) * Math.cos(hourAngle);
+  const elevation = Math.asin(Math.max(-1, Math.min(1, sinElev)));
+  const cosElev = Math.cos(elevation);
+  let azimuth = 0;
+  if (cosElev > 0.0001) {
+    let cosAz = (Math.sin(decl) - Math.sin(elevation) * Math.sin(lat)) / (cosElev * Math.cos(lat));
+    cosAz = Math.max(-1, Math.min(1, cosAz));
+    azimuth = Math.acos(cosAz); // 0..180, measured from north
+    if (hourAngle > 0) azimuth = 2 * Math.PI - azimuth; // afternoon: mirror to the west side
+  }
+  return { elevationDeg: elevation * 180 / Math.PI, azimuthDeg: azimuth * 180 / Math.PI };
+}
+
+function daylightHoursEstimate(latDeg, doy) {
+  const lat = latDeg * Math.PI / 180;
+  const decl = 23.45 * Math.PI / 180 * Math.sin(2 * Math.PI * (284 + doy) / 365);
+  const cosH0 = Math.max(-1, Math.min(1, -Math.tan(lat) * Math.tan(decl)));
+  return 2 * Math.acos(cosH0) * 180 / Math.PI / 15;
+}
+
+// Approximates each obstruction cell as a point casting a straight shadow
+// ray (length = height / tan(elevation)) away from the sun; a target cell
+// counts as shaded if it falls within a narrow band around that ray. Crude,
+// but avoids full canopy/polygon modeling for a feature that's already an estimate.
+function isCellShadowedByPoint(tx, ty, ox, oy, heightM, elevationDeg, azimuthDeg) {
+  const shadowLen = heightM / Math.tan(elevationDeg * Math.PI / 180);
+  const shadowAz = (azimuthDeg + 180) % 360;
+  const rad = shadowAz * Math.PI / 180;
+  const dirY = Math.cos(rad); // north component
+  const dirX = Math.sin(rad); // east component
+  const vx = tx - ox, vy = ty - oy;
+  const along = vx * dirX + vy * dirY;
+  if (along <= 0 || along > shadowLen) return false;
+  const perpX = vx - along * dirX, perpY = vy - along * dirY;
+  return Math.hypot(perpX, perpY) <= SHADOW_RAY_HALFWIDTH_M;
+}
+
+function shadowCastingObjects() {
+  return state.objects
+    .filter(o => o.type === 'trad' || o.type === 'byggnad' || o.type === 'hack' || o.type === 'buske')
+    .map(o => ({ cells: o.cells, height: o.type === 'buske' ? BUSH_DEFAULT_HEIGHT_M : (o.height ?? 3) }));
+}
+
+function usefulSunSamples(latitude) {
+  const samples = [];
+  SUN_SAMPLE_DATES.forEach(d => {
+    SUN_SAMPLE_HOURS.forEach(h => {
+      const pos = solarPosition(latitude, d.doy, h);
+      if (pos.elevationDeg > MIN_USEFUL_SUN_ELEVATION_DEG) samples.push(pos);
+    });
+  });
+  return samples;
+}
+
+function averageSeasonDaylightHours(latitude) {
+  return SUN_SAMPLE_DATES.reduce((sum, d) => sum + daylightHoursEstimate(latitude, d.doy), 0) / SUN_SAMPLE_DATES.length;
+}
+
+function sunBucketFor(litFraction) {
+  if (litFraction >= 0.7) return 'sol';
+  if (litFraction >= 0.3) return 'halvskugga';
+  return 'skugga';
+}
+
+// Per-cell sun estimate for a specific set of cells (e.g. one box's footprint) -
+// much cheaper than computing the whole grid when only one object's info is needed.
+function sunInfoForCells(cells) {
+  if (!state.plot || !cells.length) return null;
+  const samples = usefulSunSamples(state.plot.latitude);
+  const obstructions = shadowCastingObjects();
+  if (!samples.length) return { litFraction: 0, approxHours: 0, bucket: 'skugga' };
+  let litCount = 0;
+  cells.forEach(([x, y]) => {
+    samples.forEach(s => {
+      const shaded = obstructions.some(obj => obj.cells.some(([ox, oy]) =>
+        !(ox === x && oy === y) && isCellShadowedByPoint(x, y, ox, oy, obj.height, s.elevationDeg, s.azimuthDeg)
+      ));
+      if (!shaded) litCount++;
+    });
+  });
+  const litFraction = litCount / (samples.length * cells.length);
+  const avgDayLength = averageSeasonDaylightHours(state.plot.latitude);
+  return {
+    litFraction,
+    approxHours: Math.round(litFraction * avgDayLength * 2) / 2,
+    bucket: sunBucketFor(litFraction)
+  };
+}
+
+const SUN_BUCKET_LABEL = { sol: 'Full sol', halvskugga: 'Halvskugga', skugga: 'Skugga' };
+
+function sunBadgeText(cells) {
+  const info = sunInfoForCells(cells);
+  if (!info) return '';
+  return `☀️ ~${info.approxHours}h sol/dag · ${SUN_BUCKET_LABEL[info.bucket]} (uppskattning)`;
+}
+
+// Whole-grid version for the map filter - computed lazily (only when the
+// filter is toggled on), not on every render, since it's O(cells x samples x obstructions).
+function computeSunMap() {
+  const { width, height, latitude } = state.plot;
+  const samples = usefulSunSamples(latitude);
+  const obstructions = shadowCastingObjects();
+  const avgDayLength = averageSeasonDaylightHours(latitude);
+  const map = {};
+  for (let y = 1; y <= height; y++) {
+    for (let x = 1; x <= width; x++) {
+      let litCount = 0;
+      if (samples.length) {
+        samples.forEach(s => {
+          const shaded = obstructions.some(obj => obj.cells.some(([ox, oy]) =>
+            !(ox === x && oy === y) && isCellShadowedByPoint(x, y, ox, oy, obj.height, s.elevationDeg, s.azimuthDeg)
+          ));
+          if (!shaded) litCount++;
+        });
+      }
+      const litFraction = samples.length ? litCount / samples.length : 0;
+      map[`${x},${y}`] = {
+        litFraction,
+        approxHours: Math.round(litFraction * avgDayLength * 2) / 2,
+        bucket: sunBucketFor(litFraction)
+      };
+    }
+  }
+  return map;
 }
 
 function addObject(type, cells, props) {
@@ -571,6 +727,47 @@ function renderTomt() {
   return renderPlotGrid();
 }
 
+// Shared between the initial plot setup and the later "Ändra mått" modal -
+// both just need a button that fills in whichever latitude <input> is given.
+function geoLocationButtonHtml(btnId, statusId) {
+  return `
+    <button type="button" class="chip" id="${btnId}" style="width:100%;padding:8px;font-size:0.8rem">📍 Använd min plats</button>
+    <p id="${statusId}" style="font-size:0.72rem;color:var(--muted);margin:4px 0 0"></p>
+  `;
+}
+
+// Geolocation only gives us latitude (we never collect/use longitude - see
+// the sol/skugga section for why). Falls back to whatever the user types
+// manually if permission is denied, the API is missing, or it times out.
+function wireGeoLocationButton(btnId, latInputId, statusId) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  const status = document.getElementById(statusId);
+  if (!navigator.geolocation) {
+    btn.disabled = true;
+    btn.textContent = '📍 Platsåtkomst stöds inte i denna webbläsare';
+    return;
+  }
+  btn.addEventListener('click', () => {
+    btn.disabled = true;
+    btn.textContent = '📍 Hämtar plats...';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        document.getElementById(latInputId).value = pos.coords.latitude.toFixed(1);
+        if (status) status.textContent = '✓ Plats hittad och ifylld.';
+        btn.disabled = false;
+        btn.textContent = '📍 Använd min plats igen';
+      },
+      () => {
+        if (status) status.textContent = 'Kunde inte hämta plats - skriv in latitud manuellt ovan istället.';
+        btn.disabled = false;
+        btn.textContent = '📍 Försök igen';
+      },
+      { timeout: 10000 }
+    );
+  });
+}
+
 function renderPlotSetup() {
   return `
     <h2>Sätt upp din tomt</h2>
@@ -584,8 +781,9 @@ function renderPlotSetup() {
       <input type="number" id="plot-height-input" min="1" max="${MAX_PLOT_DIM}" value="20" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:12px">
       <p class="modal-section-title">Ungefärlig latitud (grader nord)</p>
       <p style="font-size:0.78rem;color:var(--muted);margin-bottom:6px">Används längre fram för att räkna ut sol/skugga. Standardvärdet passar mellersta Sverige.</p>
-      <input type="number" id="plot-lat-input" step="0.1" value="59.8" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:16px">
-      <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="plot-setup-btn">Skapa karta</button>
+      <input type="number" id="plot-lat-input" step="0.1" value="59.8" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:8px">
+      ${geoLocationButtonHtml('plot-lat-geo-btn', 'plot-lat-geo-status')}
+      <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem;margin-top:16px" id="plot-setup-btn">Skapa karta</button>
     </div>
   `;
 }
@@ -608,13 +806,16 @@ function openPlotResizeModal() {
       <p class="modal-section-title">Djup, Y-led (m)</p>
       <input type="number" id="plot-resize-height-input" min="1" max="${MAX_PLOT_DIM}" value="${height}" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:12px">
       <p class="modal-section-title">Ungefärlig latitud (grader nord)</p>
-      <input type="number" id="plot-resize-lat-input" step="0.1" value="${latitude}" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:16px">
-      <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="plot-resize-confirm-btn">Spara nya mått</button>
+      <input type="number" id="plot-resize-lat-input" step="0.1" value="${latitude}" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:8px">
+      ${geoLocationButtonHtml('plot-resize-lat-geo-btn', 'plot-resize-lat-geo-status')}
+      <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem;margin-top:16px" id="plot-resize-confirm-btn">Spara nya mått</button>
     </div>
   `;
   document.getElementById('modal-content').innerHTML = html;
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+
+  wireGeoLocationButton('plot-resize-lat-geo-btn', 'plot-resize-lat-input', 'plot-resize-lat-geo-status');
 
   document.getElementById('plot-resize-confirm-btn').addEventListener('click', () => {
     const w = Math.max(1, Math.min(MAX_PLOT_DIM, Math.round(Number(document.getElementById('plot-resize-width-input').value)) || 0));
@@ -707,6 +908,7 @@ function renderPlotGrid() {
   state.objects.forEach(o => {
     if (iconModeFor(o.type) === 'center') iconCellByObjId[o.id] = objectIconCellKey(o);
   });
+  const sunMap = sunFilterOn ? computeSunMap() : null;
 
   let cellsHtml = '';
   for (let y = height; y >= 1; y--) {
@@ -721,7 +923,8 @@ function renderPlotGrid() {
         else if (mode === 'center' && iconCellByObjId[obj.id] === `${x},${y}`) icon = objectIcon(obj);
       }
       const roofClass = (obj && obj.type === 'byggnad' && edges) ? 'plot-cell-roof-edge' : '';
-      cellsHtml += `<div class="plot-cell ${typeClass} ${edges} ${roofClass}" data-x="${x}" data-y="${y}">${icon}</div>`;
+      const sunAttr = sunMap ? ` data-sun="${sunMap[`${x},${y}`].bucket}"` : '';
+      cellsHtml += `<div class="plot-cell ${typeClass} ${edges} ${roofClass}" data-x="${x}" data-y="${y}"${sunAttr}>${icon}</div>`;
     }
   }
   return `
@@ -730,14 +933,23 @@ function renderPlotGrid() {
       <div class="plot-zoom-controls">
         <button type="button" class="chip" id="plot-zoom-out">−</button>
         <button type="button" class="chip" id="plot-zoom-in">+</button>
+        <button type="button" class="chip ${sunFilterOn ? 'active' : ''}" id="plot-sun-toggle-btn">☀️ Sol/skugga</button>
         <button type="button" class="chip" id="plot-resize-btn">⚙️ Ändra mått</button>
         <button type="button" class="chip" id="plot-clear-btn">🗑️ Rensa tomten</button>
       </div>
     </div>
     <p class="plot-compass-line">🧭 N (upp) · S (ner) · V (vänster) · Ö (höger)</p>
     <p style="font-size:0.78rem;color:var(--muted);margin-bottom:10px">Dra över flera rutor för att markera ett område, tryck på en ruta för att redigera den.</p>
+    ${sunFilterOn ? `
+    <div class="plot-sun-legend">
+      <span><i class="sun-swatch sun-swatch-sol"></i>Full sol</span>
+      <span><i class="sun-swatch sun-swatch-halvskugga"></i>Halvskugga</span>
+      <span><i class="sun-swatch sun-swatch-skugga"></i>Skugga</span>
+    </div>
+    <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px">Grov uppskattning baserad på solvinkel över säsongen och höjden på det du placerat - inte en exakt mätning.</p>
+    ` : ''}
     <div class="plot-grid-scroll">
-      <div class="plot-grid" id="plot-grid" style="grid-template-columns:repeat(${width}, ${plotZoom}px);grid-template-rows:repeat(${height}, ${plotZoom}px)">
+      <div class="plot-grid ${sunFilterOn ? 'sun-filter-on' : ''}" id="plot-grid" style="grid-template-columns:repeat(${width}, ${plotZoom}px);grid-template-rows:repeat(${height}, ${plotZoom}px)">
         ${cellsHtml}
       </div>
     </div>
@@ -988,6 +1200,7 @@ function openBoxEditor(boxId) {
   const html = `
     <p class="modal-title">${box.name}</p>
     <p class="modal-sub">${box.cells.length} ruta${box.cells.length > 1 ? 'or' : ''} · (${box.cells.map(c => c.join(',')).join('), (')})</p>
+    <p class="modal-sub sun-badge sun-badge-${sunInfoForCells(box.cells)?.bucket || ''}">${sunBadgeText(box.cells)}</p>
     <button type="button" class="chip" id="history-btn" style="margin-bottom:14px">📜 Historik</button>
     <div id="rotation-recs-slot"></div>
     <div class="modal-section">
@@ -1383,6 +1596,8 @@ function attachViewHandlers() {
     importFileInput.value = '';
   });
 
+  wireGeoLocationButton('plot-lat-geo-btn', 'plot-lat-input', 'plot-lat-geo-status');
+
   const plotSetupBtn = document.getElementById('plot-setup-btn');
   if (plotSetupBtn) plotSetupBtn.addEventListener('click', () => {
     const w = Math.max(1, Math.min(MAX_PLOT_DIM, Math.round(Number(document.getElementById('plot-width-input').value)) || 0));
@@ -1402,6 +1617,9 @@ function attachViewHandlers() {
 
   const plotResizeBtn = document.getElementById('plot-resize-btn');
   if (plotResizeBtn) plotResizeBtn.addEventListener('click', openPlotResizeModal);
+
+  const plotSunToggleBtn = document.getElementById('plot-sun-toggle-btn');
+  if (plotSunToggleBtn) plotSunToggleBtn.addEventListener('click', () => { sunFilterOn = !sunFilterOn; render(); });
 
   const plotClearBtn = document.getElementById('plot-clear-btn');
   if (plotClearBtn) plotClearBtn.addEventListener('click', () => {

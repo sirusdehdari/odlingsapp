@@ -493,6 +493,7 @@ table.schedule .cell {
 }
 .plot-zoom-controls { display: flex; align-items: center; gap: 6px; }
 .plot-zoom-controls .chip { padding: 6px 14px; font-size: 0.95rem; font-weight: 700; }
+.plot-zoom-controls #plot-sun-toggle-btn,
 .plot-zoom-controls #plot-resize-btn,
 .plot-zoom-controls #plot-clear-btn {
   padding: 6px 10px;
@@ -562,6 +563,36 @@ table.schedule .cell {
 .plot-cell-byggnad.plot-edge-w { border-left: 4px solid #4A3826; }
 .plot-cell-byggnad.plot-edge-e { border-right: 4px solid #4A3826; }
 .plot-cell-roof-edge { background: #A9835F; }
+
+/* Sol/skugga filter - overrides the type-based background while active;
+   icons stay visible on top so placed objects are still identifiable. */
+.plot-grid.sun-filter-on .plot-cell[data-sun="sol"] { background: #F2C744; }
+.plot-grid.sun-filter-on .plot-cell[data-sun="halvskugga"] { background: #E3A857; }
+.plot-grid.sun-filter-on .plot-cell[data-sun="skugga"] { background: #93A7B8; }
+.plot-sun-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.sun-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.sun-swatch-sol { background: #F2C744; }
+.sun-swatch-halvskugga { background: #E3A857; }
+.sun-swatch-skugga { background: #93A7B8; }
+
+.sun-badge { font-weight: 600; }
+.sun-badge-sol { color: #B8860B; }
+.sun-badge-halvskugga { color: #A3672E; }
+.sun-badge-skugga { color: #5B7285; }
 
 .type-grid {
   display: grid;
