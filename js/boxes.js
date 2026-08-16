@@ -35,5 +35,8 @@ const BUSH_SPECIES = [
   { id: 'krusbar', name: 'Krusbär' },
   { id: 'hallon', name: 'Hallon' },
   { id: 'aronia', name: 'Aronia' },
+  { id: 'blabar', name: 'Blåbär (odlad)' },
+  { id: 'bjornbar', name: 'Björnbär' },
+  { id: 'havtorn', name: 'Havtorn' },
   { id: 'ovrigt', name: 'Övrig/prydnadsbuske' }
 ];

@@ -40,6 +40,30 @@ const BERRIES = {
     tips: 'En av de mest skötselfria och näringstäta bärbuskarna som finns – låg insats, hög hälsovinst.',
     skadedjur: 'Bärens strama, syrliga smak gör dem mindre attraktiva för fåglar än söta bär – ofta det minst utsatta bäret i trädgården.'
   },
+  blabar: {
+    name: 'Blåbär (odlad)', sub: 'C-vitamin · K-vitamin · Antioxidanter - trädgårdssort, inte samma art som skogsblåbär', maintenance: 'medel',
+    plantering: 'Plantera vår eller höst i sur jord (pH ca 4,5–5,5) - vanlig trädgårdsjord är oftast för basisk, blanda in surjord/torv vid planteringen. Sol till halvskugga.',
+    skotsel: ['Håll jorden fuktig men inte vattendränkt - mulch av bark eller barrförna hjälper.', 'Minimal beskärning de första åren, ta sedan bort de äldsta grenarna efter några år.', 'Gödsla med surjordsgödsel, inte vanlig trädgårdsgödsel.'],
+    skörd: 'Juli–augusti, plocka löpande när bären är helt mörkblå.',
+    tips: 'Den vanligaste missen är att plantera i vanlig, för basisk trädgårdsjord - kolla jordens pH innan plantering om du är osäker.',
+    skadedjur: 'Fåglar är mycket förtjusta i blåbär - nät behövs nästan alltid för att få behålla någon skörd själv.'
+  },
+  bjornbar: {
+    name: 'Björnbär', sub: 'Fibrer · C-vitamin · Antioxidanter - växer på kanor, precis som hallon', maintenance: 'medel',
+    plantering: 'Plantera vår eller höst i sol, med stöd (spaljé eller ståltråd) - många sorter har långa, kraftiga kanor. Törnfria sorter finns och är betydligt lättare att hantera.',
+    skotsel: ['Vattna vid torka, särskilt under fruktsättning.', 'Bind upp kanorna mot stödet under säsongen.', 'Skär ner de kanor som burit frukt efter skörd, precis som höstbärande hallon.'],
+    skörd: 'Augusti–september, plockas när bären är helt mörka och släpper lätt från busken.',
+    tips: 'Törnade sorter sprider sig aggressivt via rotskott och kan bli svåra att hålla efter i en mindre trädgård - en törnfri sort är ofta ett enklare val.',
+    skadedjur: 'Fåglar och getingar tar gärna av den mogna frukten. Törnarna avskräcker rådjur ganska effektivt på egen hand.'
+  },
+  havtorn: {
+    name: 'Havtorn', sub: 'Mycket hög C-vitaminhalt - kräver både en hane och en hona för att sätta bär', maintenance: 'latt',
+    plantering: 'Plantera vår eller höst i sol, tålig för mager och sandig jord. Havtorn är tvåbyggare - du behöver minst en hanplanta och en honplanta inom ca 5–10 m från varandra för att honplantan ska sätta bär.',
+    skotsel: ['Mycket tålig och torktolerant när den väl etablerat sig.', 'Minimal beskärning behövs.', 'Klarar sig utan gödning i de flesta jordar.'],
+    skörd: 'September - bären sitter tätt mot grenarna och är sura. Vanligast att skörda hela grenar och frysa innan bären knäpps av, eller pressa saft direkt.',
+    tips: 'Den vanligaste missen är att bara plantera en enda planta och undra varför den aldrig ger bär - kolla att du har både hane och hona innan du planterar.',
+    skadedjur: 'Generellt mycket motståndskraftig mot skadedjur och sjukdomar - ett av de mest skötselfria bären som finns.'
+  },
   jordgubbar: {
     name: 'Jordgubbar (bonus)', sub: 'C-vitamin · Fibrer · Antioxidanter · inte en buske, men hör hemma i samma hörna', maintenance: 'latt',
     plantering: 'Plantera plantor i april eller augusti, sol, 30 cm mellanrum.',

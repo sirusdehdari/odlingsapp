@@ -1101,11 +1101,19 @@ function openObjectCellEditor(obj, x, y) {
   else if (obj.type === 'buske') detail = `${BUSH_SPECIES.find(s => s.id === obj.species)?.name || ''}`;
   else if (obj.type === 'byggnad' || obj.type === 'hack') detail = `${obj.height ?? '?'} m hög`;
 
+  const hasFruitInfo = obj.type === 'trad' && obj.kind === 'frukt' && FRUIT_TREES[obj.species];
+  const hasBerryInfo = obj.type === 'buske' && BERRIES[obj.species];
+  const infoLabel = hasFruitInfo ? `🍎 Info om ${FRUIT_TREES[obj.species].name.toLowerCase()}`
+    : hasBerryInfo ? `🫐 Info om ${BERRIES[obj.species].name.toLowerCase()}` : '';
   const html = `
     <p class="modal-title">${label}</p>
     <p class="modal-sub">${detail}${detail ? ' · ' : ''}Ruta (${x},${y}) av ${obj.cells.length} totalt</p>
+    ${infoLabel ? `
     <div class="modal-section">
-      <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="obj-edit-whole-btn">Redigera hela objektet</button>
+      <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem" id="obj-species-info-btn">${infoLabel}</button>
+    </div>` : ''}
+    <div class="modal-section">
+      <button class="chip ${infoLabel ? '' : 'active'}" style="width:100%;padding:10px;font-size:0.9rem" id="obj-edit-whole-btn">Redigera hela objektet</button>
     </div>
     <div class="modal-section">
       <button class="chip" style="width:100%;padding:10px;font-size:0.9rem" id="obj-expand-btn">➕ Expandera det här objektet</button>
@@ -1118,6 +1126,8 @@ function openObjectCellEditor(obj, x, y) {
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 
+  if (hasFruitInfo) document.getElementById('obj-species-info-btn').addEventListener('click', () => openFruitTreeModal(obj.species));
+  else if (hasBerryInfo) document.getElementById('obj-species-info-btn').addEventListener('click', () => openBerryModal(obj.species));
   document.getElementById('obj-edit-whole-btn').addEventListener('click', () => openTypePicker(obj.cells, obj));
   document.getElementById('obj-expand-btn').addEventListener('click', () => {
     expandingObjectId = obj.id;
@@ -1306,8 +1316,6 @@ function openBoxEditor(boxId) {
     updateRecommendations();
   }
 
-  // Cross-box companion warnings (based on real grid distance) return once
-  // Phase B ships; for now this only checks conflicts within the box itself.
   function updateWarning() {
     if (!cropPicker) return;
     const ownEntries = cropPicker.getSelectedIds();
@@ -1353,6 +1361,26 @@ function openBoxEditor(boxId) {
         });
       });
     });
+
+    // Valnöt (Juglans regia) avger juglon via rötterna, vilket faktiskt är
+    // giftigt för nattskatteväxter (tomat, potatis, paprika, padron) - till
+    // skillnad från de flesta andra växtkombinationer i appen är detta inte
+    // en odlingstradition utan en dokumenterad kemisk effekt. Radien är en
+    // grov tumregel (ungefär trädets höjd) eftersom den verkliga juglon-zonen
+    // beror på sort, jordmån och trädets ålder.
+    const walnutTrees = state.objects.filter(o => o.type === 'trad' && o.species === 'valnot');
+    if (walnutTrees.length) {
+      const nightshadeIds = ownCropIds.filter(id => CROPS[id].family === 'nattskatta');
+      nightshadeIds.forEach(cropId => {
+        walnutTrees.forEach(tree => {
+          const dist = minDistanceBetweenObjects(box, tree);
+          const radius = Math.max(tree.height ?? 3, 5);
+          if (dist <= radius) {
+            warnings.push(`${CROPS[cropId].name} är känsligt för juglon, ett ämne valnötsträd (${tree.height ?? '?'} m högt) avger via rötterna - giftigt för nattskatteväxter, inte bara en trivselfråga. Ungefärlig riskzon ~${radius.toFixed(0)} m (grov tumregel baserad på trädhöjd), avstånd hit ~${dist.toFixed(1)} m.`);
+          }
+        });
+      });
+    }
 
     ownEntries.forEach(entry => {
       const lateWarning = checkSowingLateness(CROPS[entry.cropId], entry.plantedDate);
@@ -1592,6 +1620,37 @@ function openBerryModal(id) {
       <p>${b.skadedjur}</p>
     </div>` : ''}
     <div class="modal-tip">💡 ${b.tips}</div>
+  `;
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function openFruitTreeModal(speciesId) {
+  const t = FRUIT_TREES[speciesId];
+  if (!t) return;
+  const html = `
+    <p class="modal-title">${t.name}</p>
+    <p class="modal-sub">${t.sub}</p>
+    <div class="pill-row"><span class="pill ${t.maintenance}">${MAINT_ICON[t.maintenance]} ${MAINT_LABEL[t.maintenance]}</span></div>
+    <div class="modal-section">
+      <p class="modal-section-title">🌱 Plantering</p>
+      <p>${t.plantering}</p>
+    </div>
+    <div class="modal-section">
+      <p class="modal-section-title">💧 Skötsel</p>
+      <ul>${t.skotsel.map(s => `<li>${s}</li>`).join('')}</ul>
+    </div>
+    <div class="modal-section">
+      <p class="modal-section-title">🧺 Skörd</p>
+      <p>${t.skörd}</p>
+    </div>
+    ${t.skadedjur ? `
+    <div class="modal-section">
+      <p class="modal-section-title">🐦🦌 Skadedjur & sjukdomar</p>
+      <p>${t.skadedjur}</p>
+    </div>` : ''}
+    <div class="modal-tip">💡 ${t.tips}</div>
   `;
   document.getElementById('modal-content').innerHTML = html;
   document.getElementById('modal-overlay').classList.add('open');
