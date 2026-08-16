@@ -487,10 +487,19 @@ table.schedule .cell {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 10px;
 }
-.plot-zoom-controls { display: flex; gap: 6px; }
+.plot-zoom-controls { display: flex; align-items: center; gap: 6px; }
 .plot-zoom-controls .chip { padding: 6px 14px; font-size: 0.95rem; font-weight: 700; }
+.plot-zoom-controls #plot-clear-btn {
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8B3A2E;
+  border-color: #8B3A2E;
+}
 .plot-compass-line {
   font-size: 0.78rem;
   color: var(--muted);

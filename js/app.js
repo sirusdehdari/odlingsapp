@@ -667,6 +667,7 @@ function renderPlotGrid() {
       <div class="plot-zoom-controls">
         <button type="button" class="chip" id="plot-zoom-out">−</button>
         <button type="button" class="chip" id="plot-zoom-in">+</button>
+        <button type="button" class="chip" id="plot-clear-btn">🗑️ Rensa tomten</button>
       </div>
     </div>
     <p class="plot-compass-line">🧭 N (upp) · S (ner) · V (vänster) · Ö (höger)</p>
@@ -1334,6 +1335,15 @@ function attachViewHandlers() {
   const zoomOutBtn = document.getElementById('plot-zoom-out');
   if (zoomInBtn) zoomInBtn.addEventListener('click', () => { plotZoom = Math.min(48, plotZoom + 6); render(); });
   if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => { plotZoom = Math.max(14, plotZoom - 6); render(); });
+
+  const plotClearBtn = document.getElementById('plot-clear-btn');
+  if (plotClearBtn) plotClearBtn.addEventListener('click', () => {
+    if (!state.objects.length) return;
+    if (!confirm('Rensa hela tomten? Alla placerade objekt (träd, buskar, lådor, hus m.m.) tas bort och allt blir gräs igen. Det här går inte att ångra.')) return;
+    state.objects = [];
+    saveState();
+    render();
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
