@@ -542,6 +542,15 @@ table.schedule .cell {
 .plot-cell.plot-edge-w { border-left: 2px solid rgba(28,28,26,0.55); }
 .plot-cell.plot-edge-e { border-right: 2px solid rgba(28,28,26,0.55); }
 
+/* Buildings get emphasized "wall" edges (thicker + darker) plus a darker
+   ring one cell deep around the boundary, so the outline reads clearly as
+   a structure with a roofline rather than just a tinted rectangle. */
+.plot-cell-byggnad.plot-edge-n { border-top: 4px solid #4A3826; }
+.plot-cell-byggnad.plot-edge-s { border-bottom: 4px solid #4A3826; }
+.plot-cell-byggnad.plot-edge-w { border-left: 4px solid #4A3826; }
+.plot-cell-byggnad.plot-edge-e { border-right: 4px solid #4A3826; }
+.plot-cell-roof-edge { background: #A9835F; }
+
 .type-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

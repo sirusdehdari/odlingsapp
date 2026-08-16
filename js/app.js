@@ -627,20 +627,38 @@ function edgeClasses(x, y, obj) {
   return classes.join(' ');
 }
 
+// Icon placement differs by type: träd/buske are organic ground cover, so
+// every one of their cells repeats the icon (reads as "this whole area is
+// canopy/foliage"). Byggnad gets no icon at all - the walls/roof styling
+// carry it instead. Everything else (box, sten, grusgang, hack) gets a
+// single icon on the cell nearest the footprint's centroid.
+function iconModeFor(type) {
+  if (type === 'trad' || type === 'buske') return 'every';
+  if (type === 'byggnad') return 'none';
+  return 'center';
+}
+
 function renderPlotGrid() {
   const { width, height } = state.plot;
   const iconCellByObjId = {};
-  state.objects.forEach(o => { iconCellByObjId[o.id] = objectIconCellKey(o); });
+  state.objects.forEach(o => {
+    if (iconModeFor(o.type) === 'center') iconCellByObjId[o.id] = objectIconCellKey(o);
+  });
 
   let cellsHtml = '';
   for (let y = height; y >= 1; y--) {
     for (let x = 1; x <= width; x++) {
       const obj = findObjectAt(x, y);
       const typeClass = `plot-cell-${obj ? obj.type : 'gras'}`;
-      const showIcon = obj && iconCellByObjId[obj.id] === `${x},${y}`;
-      const icon = showIcon ? objectIcon(obj) : '';
       const edges = edgeClasses(x, y, obj);
-      cellsHtml += `<div class="plot-cell ${typeClass} ${edges}" data-x="${x}" data-y="${y}">${icon}</div>`;
+      let icon = '';
+      if (obj) {
+        const mode = iconModeFor(obj.type);
+        if (mode === 'every') icon = objectIcon(obj);
+        else if (mode === 'center' && iconCellByObjId[obj.id] === `${x},${y}`) icon = objectIcon(obj);
+      }
+      const roofClass = (obj && obj.type === 'byggnad' && edges) ? 'plot-cell-roof-edge' : '';
+      cellsHtml += `<div class="plot-cell ${typeClass} ${edges} ${roofClass}" data-x="${x}" data-y="${y}">${icon}</div>`;
     }
   }
   return `
@@ -741,6 +759,17 @@ function handlePlotSelection(bounds) {
       openObjectCellEditor(existing, x, y);
       return;
     }
+    openTypePicker(cells, null);
+    return;
+  }
+  // A multi-cell drag that overlaps something already placed would otherwise
+  // create a second object silently claiming the same cell(s) - two objects
+  // "owning" one square, which corrupts state in ways the UI can't undo.
+  // Block it with a clear reason instead of a confusing no-op or silent bug.
+  const occupied = cells.filter(([x, y]) => findObjectAt(x, y));
+  if (occupied.length) {
+    alert(`${occupied.length} av de ${cells.length} markerade rutorna har redan något placerat. Rensa dem en och en (tryck på varje ruta) innan du markerar ett nytt område här.`);
+    return;
   }
   openTypePicker(cells, null);
 }
