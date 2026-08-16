@@ -780,8 +780,8 @@ function renderPlotSetup() {
       <p class="modal-section-title">Djup, Y-led (m)</p>
       <input type="number" id="plot-height-input" min="1" max="${MAX_PLOT_DIM}" value="20" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:12px">
       <p class="modal-section-title">Ungefärlig latitud (grader nord)</p>
-      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:6px">Används längre fram för att räkna ut sol/skugga. Standardvärdet passar mellersta Sverige.</p>
-      <input type="number" id="plot-lat-input" step="0.1" value="59.8" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:8px">
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:6px">Används längre fram för att räkna ut sol/skugga. Standardvärdet är Stockholm - ändra det om du bor någon annanstans, eller använd knappen nedan.</p>
+      <input type="number" id="plot-lat-input" step="0.1" value="59.3" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:8px">
       ${geoLocationButtonHtml('plot-lat-geo-btn', 'plot-lat-geo-status')}
       <button class="chip active" style="width:100%;padding:10px;font-size:0.9rem;margin-top:16px" id="plot-setup-btn">Skapa karta</button>
     </div>
@@ -820,7 +820,7 @@ function openPlotResizeModal() {
   document.getElementById('plot-resize-confirm-btn').addEventListener('click', () => {
     const w = Math.max(1, Math.min(MAX_PLOT_DIM, Math.round(Number(document.getElementById('plot-resize-width-input').value)) || 0));
     const h = Math.max(1, Math.min(MAX_PLOT_DIM, Math.round(Number(document.getElementById('plot-resize-height-input').value)) || 0));
-    const lat = Number(document.getElementById('plot-resize-lat-input').value) || 59.8;
+    const lat = Number(document.getElementById('plot-resize-lat-input').value) || 59.3;
     if (!w || !h) { alert('Ange giltiga mått.'); return; }
 
     const impacted = state.objects
@@ -1602,7 +1602,7 @@ function attachViewHandlers() {
   if (plotSetupBtn) plotSetupBtn.addEventListener('click', () => {
     const w = Math.max(1, Math.min(MAX_PLOT_DIM, Math.round(Number(document.getElementById('plot-width-input').value)) || 0));
     const h = Math.max(1, Math.min(MAX_PLOT_DIM, Math.round(Number(document.getElementById('plot-height-input').value)) || 0));
-    const lat = Number(document.getElementById('plot-lat-input').value) || 59.8;
+    const lat = Number(document.getElementById('plot-lat-input').value) || 59.3; // Stockholm, if the field is somehow left empty/invalid
     if (!w || !h) { alert('Ange giltiga mått.'); return; }
     state.plot = { width: w, height: h, latitude: lat };
     state.objects = [];
