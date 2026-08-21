@@ -10,7 +10,10 @@ const MAX_CROPS_PER_BOX = 4;
 let state = loadState();
 let plotZoom = 26; // px per grid cell, adjustable via +/- controls
 let sunFilterOn = false; // toggles the sol/skugga map overlay
+let sunViewDate = new Date(); // which date the sol/skugga filter shows
+let sunViewHour = 12; // which solar hour the sol/skugga filter shows (12 = solar noon)
 let expandingObjectId = null; // set while the next selection should be merged into an existing object instead of creating a new one
+let panMode = false; // when true, dragging the plot grid scrolls the view instead of selecting cells
 
 // v2: state = { plot: {width,height,latitude} | null, objects: [...], boxes: {...} }.
 // No migration from the old box-list model - the user explicitly asked to
@@ -188,34 +191,45 @@ function sunBadgeText(cells) {
   return `☀️ ~${info.approxHours}h sol/dag · ${SUN_BUCKET_LABEL[info.bucket]} (uppskattning)`;
 }
 
-// Whole-grid version for the map filter - computed lazily (only when the
-// filter is toggled on), not on every render, since it's O(cells x samples x obstructions).
-function computeSunMap() {
-  const { width, height, latitude } = state.plot;
-  const samples = usefulSunSamples(latitude);
+// Whole-grid version for the map filter - a single moment in time (unlike
+// sunInfoForCells/the box badge, which blend many samples into a seasonal
+// average). Shadows are binary at an instant, so no halvskugga bucket here;
+// a third bucket ("natt") flags when the sun is too low/below the horizon
+// for the whole grid, so that isn't misread as "everything is shaded by
+// something you placed". Computed lazily (only while the filter is on).
+function computeSunMapAt(latitude, doy, solarHour) {
+  const { width, height } = state.plot;
+  const pos = solarPosition(latitude, doy, solarHour);
+  const tooLow = pos.elevationDeg <= MIN_USEFUL_SUN_ELEVATION_DEG;
   const obstructions = shadowCastingObjects();
-  const avgDayLength = averageSeasonDaylightHours(latitude);
   const map = {};
   for (let y = 1; y <= height; y++) {
     for (let x = 1; x <= width; x++) {
-      let litCount = 0;
-      if (samples.length) {
-        samples.forEach(s => {
-          const shaded = obstructions.some(obj => obj.cells.some(([ox, oy]) =>
-            !(ox === x && oy === y) && isCellShadowedByPoint(x, y, ox, oy, obj.height, s.elevationDeg, s.azimuthDeg)
-          ));
-          if (!shaded) litCount++;
-        });
+      let bucket;
+      if (tooLow) {
+        bucket = 'natt';
+      } else {
+        const shaded = obstructions.some(obj => obj.cells.some(([ox, oy]) =>
+          !(ox === x && oy === y) && isCellShadowedByPoint(x, y, ox, oy, obj.height, pos.elevationDeg, pos.azimuthDeg)
+        ));
+        bucket = shaded ? 'skugga' : 'sol';
       }
-      const litFraction = samples.length ? litCount / samples.length : 0;
-      map[`${x},${y}`] = {
-        litFraction,
-        approxHours: Math.round(litFraction * avgDayLength * 2) / 2,
-        bucket: sunBucketFor(litFraction)
-      };
+      map[`${x},${y}`] = bucket;
     }
   }
-  return map;
+  return { map, elevationDeg: pos.elevationDeg, tooLow };
+}
+
+function dayOfYear(date) {
+  const start = new Date(date.getFullYear(), 0, 0);
+  return Math.floor((date - start) / 86400000);
+}
+
+function dateInputValueOf(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function addObject(type, cells, props) {
@@ -916,7 +930,7 @@ function renderPlotGrid() {
   state.objects.forEach(o => {
     if (iconModeFor(o.type) === 'center') iconCellByObjId[o.id] = objectIconCellKey(o);
   });
-  const sunMap = sunFilterOn ? computeSunMap() : null;
+  const sunResult = sunFilterOn ? computeSunMapAt(state.plot.latitude, dayOfYear(sunViewDate), sunViewHour) : null;
 
   let cellsHtml = '';
   for (let y = height; y >= 1; y--) {
@@ -931,7 +945,7 @@ function renderPlotGrid() {
         else if (mode === 'center' && iconCellByObjId[obj.id] === `${x},${y}`) icon = objectIcon(obj);
       }
       const roofClass = (obj && obj.type === 'byggnad' && edges) ? 'plot-cell-roof-edge' : '';
-      const sunAttr = sunMap ? ` data-sun="${sunMap[`${x},${y}`].bucket}"` : '';
+      const sunAttr = sunResult ? ` data-sun="${sunResult.map[`${x},${y}`]}"` : '';
       cellsHtml += `<div class="plot-cell ${typeClass} ${edges} ${roofClass}" data-x="${x}" data-y="${y}"${sunAttr}>${icon}</div>`;
     }
   }
@@ -941,13 +955,14 @@ function renderPlotGrid() {
       <div class="plot-zoom-controls">
         <button type="button" class="chip" id="plot-zoom-out">−</button>
         <button type="button" class="chip" id="plot-zoom-in">+</button>
+        <button type="button" class="chip ${panMode ? 'active' : ''}" id="plot-pan-toggle-btn">🖐️ Flytta karta</button>
         <button type="button" class="chip ${sunFilterOn ? 'active' : ''}" id="plot-sun-toggle-btn">☀️ Sol/skugga</button>
         <button type="button" class="chip" id="plot-resize-btn">⚙️ Ändra mått</button>
         <button type="button" class="chip" id="plot-clear-btn">🗑️ Rensa tomten</button>
       </div>
     </div>
     <p class="plot-compass-line">🧭 N (upp) · S (ner) · V (vänster) · Ö (höger)</p>
-    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:10px">Dra över flera rutor för att markera ett område, tryck på en ruta för att redigera den.</p>
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:10px">${panMode ? 'Flytta-läge: dra för att panorera kartan. Tryck på knappen igen för att markera rutor.' : 'Dra över flera rutor för att markera ett område, tryck på en ruta för att redigera den.'}</p>
     ${expandingObjectId ? `
     <div class="plot-expand-banner">
       <span>➕ Expanderar <b>${expandLabelForObject(expandingObjectId)}</b> - markera tomma rutor att lägga till.</span>
@@ -955,15 +970,23 @@ function renderPlotGrid() {
     </div>
     ` : ''}
     ${sunFilterOn ? `
-    <div class="plot-sun-legend">
-      <span><i class="sun-swatch sun-swatch-sol"></i>Full sol</span>
-      <span><i class="sun-swatch sun-swatch-halvskugga"></i>Halvskugga</span>
-      <span><i class="sun-swatch sun-swatch-skugga"></i>Skugga</span>
+    <div class="plot-sun-controls">
+      <input type="date" id="plot-sun-date-input" value="${dateInputValueOf(sunViewDate)}">
+      <input type="range" id="plot-sun-hour-input" min="4" max="22" step="1" value="${sunViewHour}">
+      <span class="plot-sun-hour-label">kl. ${sunViewHour}</span>
     </div>
-    <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px">Grov uppskattning baserad på solvinkel över säsongen och höjden på det du placerat - inte en exakt mätning.</p>
+    <div class="plot-sun-legend">
+      <span><i class="sun-swatch sun-swatch-sol"></i>Sol</span>
+      <span><i class="sun-swatch sun-swatch-skugga"></i>Skugga</span>
+      <span><i class="sun-swatch sun-swatch-natt"></i>Solen under horisonten</span>
+    </div>
+    <p style="font-size:0.72rem;color:var(--muted);margin-bottom:10px">
+      ${sunResult.tooLow ? 'Solen är under (eller väldigt nära) horisonten vid den här tidpunkten - hela tomten visas som "natt".' : `Solvinkel just nu: ~${Math.round(sunResult.elevationDeg)}°.`}
+      Visar en uppskattning av skugga från det du placerat vid exakt denna tidpunkt (ungefärlig solklocka, inte exakt lokal tid) - inte ett dagsgenomsnitt.
+    </p>
     ` : ''}
     <div class="plot-grid-scroll">
-      <div class="plot-grid ${sunFilterOn ? 'sun-filter-on' : ''}" id="plot-grid" style="grid-template-columns:repeat(${width}, ${plotZoom}px);grid-template-rows:repeat(${height}, ${plotZoom}px)">
+      <div class="plot-grid ${sunFilterOn ? 'sun-filter-on' : ''} ${panMode ? 'pan-mode' : ''}" id="plot-grid" style="grid-template-columns:repeat(${width}, ${plotZoom}px);grid-template-rows:repeat(${height}, ${plotZoom}px)">
         ${cellsHtml}
       </div>
     </div>
@@ -1007,7 +1030,7 @@ function wirePlotGrid() {
   }
 
   function endDrag(e) {
-    if (!dragging) return;
+    if (panMode || !dragging) return;
     dragging = false;
     try { grid.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
     const cell = cellFromEvent(e) || startCell;
@@ -1017,6 +1040,7 @@ function wirePlotGrid() {
   }
 
   grid.addEventListener('pointerdown', (e) => {
+    if (panMode) return; // let the browser handle the drag as a native scroll instead
     const cell = cellFromEvent(e);
     if (!cell) return;
     dragging = true;
@@ -1027,6 +1051,7 @@ function wirePlotGrid() {
   });
 
   grid.addEventListener('pointermove', (e) => {
+    if (panMode) return;
     if (!dragging) return;
     const cell = cellFromEvent(e);
     if (!cell) return;
@@ -1758,8 +1783,24 @@ function attachViewHandlers() {
   const plotResizeBtn = document.getElementById('plot-resize-btn');
   if (plotResizeBtn) plotResizeBtn.addEventListener('click', openPlotResizeModal);
 
+  const plotPanToggleBtn = document.getElementById('plot-pan-toggle-btn');
+  if (plotPanToggleBtn) plotPanToggleBtn.addEventListener('click', () => { panMode = !panMode; render(); });
+
   const plotSunToggleBtn = document.getElementById('plot-sun-toggle-btn');
   if (plotSunToggleBtn) plotSunToggleBtn.addEventListener('click', () => { sunFilterOn = !sunFilterOn; render(); });
+
+  const plotSunDateInput = document.getElementById('plot-sun-date-input');
+  if (plotSunDateInput) plotSunDateInput.addEventListener('change', () => {
+    const [y, m, d] = plotSunDateInput.value.split('-').map(Number);
+    if (y && m && d) sunViewDate = new Date(y, m - 1, d);
+    render();
+  });
+
+  const plotSunHourInput = document.getElementById('plot-sun-hour-input');
+  if (plotSunHourInput) plotSunHourInput.addEventListener('change', () => {
+    sunViewHour = Number(plotSunHourInput.value);
+    render();
+  });
 
   const plotExpandCancelBtn = document.getElementById('plot-expand-cancel-btn');
   if (plotExpandCancelBtn) plotExpandCancelBtn.addEventListener('click', () => { expandingObjectId = null; render(); });

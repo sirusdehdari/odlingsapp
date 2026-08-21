@@ -504,6 +504,7 @@ table.schedule .cell {
 }
 .plot-zoom-controls { display: flex; align-items: center; gap: 6px; }
 .plot-zoom-controls .chip { padding: 6px 14px; font-size: 0.95rem; font-weight: 700; }
+.plot-zoom-controls #plot-pan-toggle-btn,
 .plot-zoom-controls #plot-sun-toggle-btn,
 .plot-zoom-controls #plot-resize-btn,
 .plot-zoom-controls #plot-clear-btn {
@@ -558,6 +559,10 @@ table.schedule .cell {
   user-select: none;
   -webkit-user-select: none;
 }
+/* Pan mode hands touch gestures back to the browser so the scroll container
+   can be dragged natively - normally touch-action:none above claims every
+   drag for cell selection, which is exactly what blocks panning otherwise. */
+.plot-grid.pan-mode .plot-cell { touch-action: pan-x pan-y; }
 .plot-cell-gras { background: #EAF3DE; }
 .plot-cell-trad { background: #B7D9A8; }
 .plot-cell-buske { background: #CFE3B0; }
@@ -592,8 +597,24 @@ table.schedule .cell {
 /* Sol/skugga filter - overrides the type-based background while active;
    icons stay visible on top so placed objects are still identifiable. */
 .plot-grid.sun-filter-on .plot-cell[data-sun="sol"] { background: #F2C744; }
-.plot-grid.sun-filter-on .plot-cell[data-sun="halvskugga"] { background: #E3A857; }
 .plot-grid.sun-filter-on .plot-cell[data-sun="skugga"] { background: #93A7B8; }
+.plot-grid.sun-filter-on .plot-cell[data-sun="natt"] { background: #3B3F52; }
+.plot-sun-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.plot-sun-controls input[type="date"] {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+}
+.plot-sun-controls input[type="range"] { flex: 1; min-width: 100px; }
+.plot-sun-hour-label { font-size: 0.8rem; color: var(--muted); min-width: 3.5em; }
 .plot-sun-legend {
   display: flex;
   gap: 14px;
@@ -611,8 +632,8 @@ table.schedule .cell {
   vertical-align: middle;
 }
 .sun-swatch-sol { background: #F2C744; }
-.sun-swatch-halvskugga { background: #E3A857; }
 .sun-swatch-skugga { background: #93A7B8; }
+.sun-swatch-natt { background: #3B3F52; }
 
 .sun-badge { font-weight: 600; }
 .sun-badge-sol { color: #B8860B; }
