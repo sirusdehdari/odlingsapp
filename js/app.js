@@ -282,7 +282,8 @@ const FAMILY_LABEL = {
   kal: 'Kålväxter', lok: 'Lökväxter', baljvaxt: 'Baljväxter',
   nattskatta: 'Potatis-/nattskatteväxter', gurkvaxt: 'Gurkväxter',
   flockblommig: 'Flockblommiga växter', korgblommig: 'Korgblommiga växter',
-  spenatvaxt: 'Spenatväxter', kransblommig: 'Kransblommiga växter (mynta-familjen)'
+  spenatvaxt: 'Spenatväxter', kransblommig: 'Kransblommiga växter (mynta-familjen)',
+  syravaxt: 'Syraväxter (rabarber-familjen)'
 };
 const FEEDER_LABEL = {
   heavy: '🔴 Tär mycket på jorden – behöver återhämtning innan samma familj planteras igen på samma ställe.',
@@ -856,7 +857,7 @@ function openPlotResizeModal() {
 }
 
 const TREE_ICON = {
-  appel: '🍎', paron: '🍐', plommon: '🍑', korsbar: '🍒', krikon: '🍇',
+  appel: '🍎', paron: '🍐', plommon: '🍑', korsbar: '🍒', krikon: '🍇', hassel: '🌰',
   bjork: '🌳', gran: '🌲', tall: '🌲', lonn: '🍁', ek: '🌳', valnot: '🌰', ovrigt: '🌳'
 };
 
@@ -1507,6 +1508,32 @@ function chip(key, value, label) {
   return `<button class="chip ${active ? 'active' : ''}" data-filter-key="${key}" data-filter-value="${value}">${label}</button>`;
 }
 
+// Shared "Läs mer" collapsible - keeps the default card short while still
+// allowing much more detailed watering/problem-solving content underneath,
+// per the user's own suggestion for how to handle longer crop cards.
+function readMoreHtml(targetId, innerHtml) {
+  return `
+    <button type="button" class="chip read-more-btn" data-readmore-target="${targetId}" data-closed-label="📖 Läs mer om vattning och vanliga problem" data-open-label="📖 Visa mindre">📖 Läs mer om vattning och vanliga problem</button>
+    <div class="modal-section read-more-content" id="${targetId}" style="display:none">${innerHtml}</div>
+  `;
+}
+
+function problemListHtml(problems) {
+  if (!problems || !problems.length) return '';
+  return `
+    <div class="modal-section">
+      <p class="modal-section-title">🔍 Vanliga problem</p>
+      ${problems.map(p => `
+        <div class="problem-item">
+          <p class="problem-symptom">${p.symptom}</p>
+          <p class="problem-orsak">${p.orsak}</p>
+          <p class="problem-atgard">→ ${p.atgard}</p>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 function openCropModal(id) {
   const c = CROPS[id];
   if (!c) return;
@@ -1562,13 +1589,14 @@ function openCropModal(id) {
       <p>${FEEDER_LABEL[c.feederType] || ''}</p>
     </div>` : ''}
 
-    ${c.skadedjur ? `
-    <div class="modal-section">
-      <p class="modal-section-title">🐦🦌 Skadedjur & skydd</p>
-      <p>${c.skadedjur}</p>
-    </div>` : ''}
-
     <div class="modal-tip">💡 ${c.tips}</div>
+
+    ${(c.vattning || c.problem?.length) ? readMoreHtml(`crop-readmore-${id}`, `
+      ${c.vattning ? `
+      <p class="modal-section-title">💧 Vattning i detalj</p>
+      <p>${c.vattning}</p>` : ''}
+      ${problemListHtml(c.problem)}
+    `) : ''}
   `;
   document.getElementById('modal-content').innerHTML = html;
   document.getElementById('modal-overlay').classList.add('open');
@@ -1614,12 +1642,13 @@ function openBerryModal(id) {
       <p class="modal-section-title">🧺 Skörd</p>
       <p>${b.skörd}</p>
     </div>
-    ${b.skadedjur ? `
-    <div class="modal-section">
-      <p class="modal-section-title">🐦🦌 Skadedjur & skydd</p>
-      <p>${b.skadedjur}</p>
-    </div>` : ''}
     <div class="modal-tip">💡 ${b.tips}</div>
+    ${(b.vattning || b.problem?.length) ? readMoreHtml(`berry-readmore-${id}`, `
+      ${b.vattning ? `
+      <p class="modal-section-title">💧 Vattning i detalj</p>
+      <p>${b.vattning}</p>` : ''}
+      ${problemListHtml(b.problem)}
+    `) : ''}
   `;
   document.getElementById('modal-content').innerHTML = html;
   document.getElementById('modal-overlay').classList.add('open');
@@ -1645,12 +1674,13 @@ function openFruitTreeModal(speciesId) {
       <p class="modal-section-title">🧺 Skörd</p>
       <p>${t.skörd}</p>
     </div>
-    ${t.skadedjur ? `
-    <div class="modal-section">
-      <p class="modal-section-title">🐦🦌 Skadedjur & sjukdomar</p>
-      <p>${t.skadedjur}</p>
-    </div>` : ''}
     <div class="modal-tip">💡 ${t.tips}</div>
+    ${(t.vattning || t.problem?.length) ? readMoreHtml(`tree-readmore-${speciesId}`, `
+      ${t.vattning ? `
+      <p class="modal-section-title">💧 Vattning i detalj</p>
+      <p>${t.vattning}</p>` : ''}
+      ${problemListHtml(t.problem)}
+    `) : ''}
   `;
   document.getElementById('modal-content').innerHTML = html;
   document.getElementById('modal-overlay').classList.add('open');
@@ -1751,6 +1781,17 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-overlay').addEventListener('click', (e) => {
     if (e.target.id === 'modal-overlay') closeModal();
+  });
+  // Delegated so it works for every modal's "Läs mer" section without each
+  // opener needing its own wiring - modal-content is fully replaced per open.
+  document.getElementById('modal-content').addEventListener('click', (e) => {
+    const btn = e.target.closest('.read-more-btn');
+    if (!btn) return;
+    const target = document.getElementById(btn.dataset.readmoreTarget);
+    if (!target) return;
+    const showing = target.style.display !== 'none';
+    target.style.display = showing ? 'none' : 'block';
+    btn.textContent = showing ? btn.dataset.closedLabel : btn.dataset.openLabel;
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 

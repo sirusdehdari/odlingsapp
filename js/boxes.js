@@ -14,7 +14,8 @@ const TREE_SPECIES = {
     { id: 'paron', name: 'Päronträd' },
     { id: 'plommon', name: 'Plommonträd' },
     { id: 'korsbar', name: 'Körsbärsträd' },
-    { id: 'krikon', name: 'Krikonträd' }
+    { id: 'krikon', name: 'Krikonträd' },
+    { id: 'hassel', name: 'Hasselnöt' }
   ],
   ickefrukt: [
     { id: 'bjork', name: 'Björk' },
@@ -31,6 +32,7 @@ const TREE_SPECIES = {
 // (see berries.js); "ovrigt" covers purely ornamental bushes.
 const BUSH_SPECIES = [
   { id: 'rodavinbar', name: 'Röda vinbär' },
+  { id: 'svartavinbar', name: 'Svarta vinbär' },
   { id: 'vitavinbar', name: 'Vita vinbär' },
   { id: 'krusbar', name: 'Krusbär' },
   { id: 'hallon', name: 'Hallon' },
