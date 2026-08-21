@@ -1003,9 +1003,16 @@ function renderPlotGrid() {
 function wirePlotGrid() {
   const grid = document.getElementById('plot-grid');
   if (!grid) return;
+  const scrollEl = grid.closest('.plot-grid-scroll');
 
   let dragging = false;
   let startCell = null;
+  // Tracks every finger currently down (keyed by pointerId) so a second
+  // touch can be detected mid-gesture and switch from single-finger select
+  // to two-finger pan/pinch-zoom, matching the map-app convention the user
+  // asked for (one finger draws a selection, two fingers move the view).
+  const activePointers = new Map();
+  let pinch = null; // { startDist, startZoom, midX, midY } while 2+ fingers are down
 
   function cellFromEvent(e) {
     const el = document.elementFromPoint(e.clientX, e.clientY);
@@ -1029,6 +1036,15 @@ function wirePlotGrid() {
     });
   }
 
+  function midpointAndDistance() {
+    const pts = [...activePointers.values()];
+    return {
+      dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1,
+      midX: (pts[0].x + pts[1].x) / 2,
+      midY: (pts[0].y + pts[1].y) / 2
+    };
+  }
+
   function endDrag(e) {
     if (panMode || !dragging) return;
     dragging = false;
@@ -1040,17 +1056,48 @@ function wirePlotGrid() {
   }
 
   grid.addEventListener('pointerdown', (e) => {
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { grid.setPointerCapture(e.pointerId); } catch (err) { /* e.g. synthetic/non-active pointer id */ }
+
+    if (activePointers.size >= 2) {
+      if (dragging) { dragging = false; paintSelection(null); } // a second finger cancels any select-drag just starting
+      const m = midpointAndDistance();
+      pinch = { startDist: m.dist, startZoom: plotZoom, midX: m.midX, midY: m.midY };
+      e.preventDefault();
+      return;
+    }
+
     if (panMode) return; // let the browser handle the drag as a native scroll instead
     const cell = cellFromEvent(e);
     if (!cell) return;
     dragging = true;
     startCell = cell;
-    try { grid.setPointerCapture(e.pointerId); } catch (err) { /* e.g. synthetic/non-active pointer id */ }
     paintSelection(selectionBounds(cell, cell));
     e.preventDefault();
   });
 
   grid.addEventListener('pointermove', (e) => {
+    if (activePointers.has(e.pointerId)) activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pinch && activePointers.size >= 2) {
+      const m = midpointAndDistance();
+      // .plot-grid-scroll only ever overflows horizontally (it's height is
+      // unconstrained, so it just grows) - vertical panning has to scroll
+      // the page itself instead.
+      if (scrollEl) scrollEl.scrollLeft -= (m.midX - pinch.midX);
+      window.scrollBy(0, -(m.midY - pinch.midY));
+      const newZoom = Math.max(14, Math.min(48, Math.round(pinch.startZoom * (m.dist / pinch.startDist))));
+      if (newZoom !== plotZoom) {
+        plotZoom = newZoom;
+        grid.style.gridTemplateColumns = `repeat(${state.plot.width}, ${plotZoom}px)`;
+        grid.style.gridTemplateRows = `repeat(${state.plot.height}, ${plotZoom}px)`;
+      }
+      pinch.midX = m.midX;
+      pinch.midY = m.midY;
+      e.preventDefault();
+      return;
+    }
+
     if (panMode) return;
     if (!dragging) return;
     const cell = cellFromEvent(e);
@@ -1058,8 +1105,21 @@ function wirePlotGrid() {
     paintSelection(selectionBounds(startCell, cell));
   });
 
-  grid.addEventListener('pointerup', endDrag);
-  grid.addEventListener('pointercancel', endDrag);
+  function releasePointer(e) {
+    activePointers.delete(e.pointerId);
+    if (pinch) {
+      try { grid.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
+      if (activePointers.size < 2) {
+        pinch = null;
+        render(); // reconcile the zoom level chosen mid-gesture into a full, consistent re-render
+      }
+      return true;
+    }
+    return false;
+  }
+
+  grid.addEventListener('pointerup', (e) => { if (!releasePointer(e)) endDrag(e); });
+  grid.addEventListener('pointercancel', (e) => { if (!releasePointer(e)) endDrag(e); });
 }
 
 function handlePlotSelection(bounds) {
