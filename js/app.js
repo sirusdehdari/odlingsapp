@@ -1081,11 +1081,10 @@ function wirePlotGrid() {
 
     if (pinch && activePointers.size >= 2) {
       const m = midpointAndDistance();
-      // .plot-grid-scroll only ever overflows horizontally (it's height is
-      // unconstrained, so it just grows) - vertical panning has to scroll
-      // the page itself instead.
-      if (scrollEl) scrollEl.scrollLeft -= (m.midX - pinch.midX);
-      window.scrollBy(0, -(m.midY - pinch.midY));
+      if (scrollEl) {
+        scrollEl.scrollLeft -= (m.midX - pinch.midX);
+        scrollEl.scrollTop -= (m.midY - pinch.midY);
+      }
       const newZoom = Math.max(14, Math.min(48, Math.round(pinch.startZoom * (m.dist / pinch.startDist))));
       if (newZoom !== plotZoom) {
         plotZoom = newZoom;
