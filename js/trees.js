@@ -11,7 +11,7 @@ const FRUIT_TREES = {
     problem: [
       { symptom: 'Knoppar och unga blad äts upp tidigt på våren, ofta innan trädet ens blommat.', orsak: 'Vintermal - larverna kläcks tidigt och äter av knoppar och blad innan de vuxna fjärilarna syns.', atgard: 'Klisterband runt stammen på hösten fångar de vingslösa honorna på väg upp för att lägga ägg - ett vanligt, enkelt skydd. Sällan ett stort problem på ett i övrigt friskt träd.' },
       { symptom: 'Bruna eller gråa korkartade fläckar på blad och frukt.', orsak: 'Äppelskorv - en svampsjukdom som är vanlig i fuktiga svenska vårar.', atgard: 'Beskär för öppen krona (redan en del av skötseln) så bladen torkar snabbare efter regn. Frukten går oftast fint att äta trots fläckar - skala bort de värsta partierna.' },
-      { symptom: 'Bark eller unga skott är gnagda nära marken.', orsak: 'Rådjur eller gnagare, särskilt på nyplanterade, unga träd.', atgard: 'Sätt upp stamskydd (ett rör eller nät runt stammens nedre del) de första åren tills barken hårdnat.' }
+      { symptom: 'Bark eller unga skott är gnagda nära marken.', orsak: 'Rådjur eller gnagare (t.ex. sork), särskilt på nyplanterade, unga träd.', atgard: 'Sätt upp stamskydd (ett rör eller nät runt stammens nedre del) de första åren tills barken hårdnat. Ett skydd mot bara gnagare behöver inte vara högre än ca 50 cm, men rådjur når högre upp och gnager även på grenar - vill du skydda mot båda bör skyddet eller ett runtomgående nät vara minst 1,2–1,5 m högt de första åren.' }
     ]
   },
   paron: {
@@ -24,7 +24,7 @@ const FRUIT_TREES = {
     problem: [
       { symptom: 'Bruna eller gråa fläckar på blad och frukt, liknande äppelskorv.', orsak: 'Päronskorv - samma typ av svampsjukdom som drabbar äpple, fast på päron.', atgard: 'Samma åtgärd som äppelskorv: beskär för öppen krona och god luftcirkulation.' },
       { symptom: 'Klasar av löss på undersidan av unga blad, bladen kan bli kladdiga.', orsak: 'Bladlöss - vanliga på päron.', atgard: 'Spola bort med vattenstråle vid kraftigt angrepp. Sällan allvarligt för ett i övrigt friskt träd.' },
-      { symptom: 'Bark eller unga skott är skadade nära marken.', orsak: 'Rådjur eller gnagare på unga träd.', atgard: 'Stamskydd de första åren.' }
+      { symptom: 'Bark eller unga skott är skadade nära marken.', orsak: 'Rådjur eller gnagare på unga träd.', atgard: 'Stamskydd de första åren - ca 50 cm räcker mot gnagare, men vill du även skydda mot rådjur (som når högre och gnager på grenar) behövs ett skydd eller nät på minst 1,2–1,5 m.' }
     ]
   },
   plommon: {
@@ -48,7 +48,7 @@ const FRUIT_TREES = {
     tips: 'Fåglar hittar mogna körsbär anmärkningsvärt snabbt - om du vill ha någon skörd alls till dig själv är nät över trädet (eller delar av det) nästan ett måste.',
     vattning: 'Vattna vid torka, särskilt under fruktsättning i juni–juli.',
     problem: [
-      { symptom: 'Bären försvinner nästan över en natt precis när de mognat.', orsak: 'Fåglar - det klart största hotet mot körsbärsskörden.', atgard: 'Nät över trädet (eller delar av det) är nästan ett måste om du vill ha någon skörd kvar till dig själv.' },
+      { symptom: 'Bären försvinner nästan över en natt precis när de mognat.', orsak: 'Fåglar - det klart största hotet mot körsbärsskörden.', atgard: 'Nät över trädet (eller delar av det) är nästan ett måste om du vill ha någon skörd kvar till dig själv. Använd tät maska (max ca 2 cm), dra nätet spänt utan lösa fickor och säkra det ner mot marken eller stammen - löst hängande nät kan fånga in fåglar istället för att bara hålla dem ute.' },
       { symptom: 'Små, vita larver inuti bären vid plockning.', orsak: 'Körsbärsflugans larver - lägger ägg i den mognande frukten.', atgard: 'Gula klisterfällor i trädet under blomningen hjälper att övervaka och fånga vuxna flugor innan de hinner lägga ägg.' },
       { symptom: 'Frukten ruttnar brunt, ofta med ett gråaktigt sporpålägg.', orsak: 'Monilia (brunröta) - samma sjukdom som drabbar plommon.', atgard: 'Ta bort och kasta angripna frukter direkt.' }
     ]

@@ -8,9 +8,9 @@ const BERRIES = {
     tips: 'En av de mest odlingssäkra bärbuskarna i svenskt klimat – ger skörd redan år två.',
     vattning: 'Vattna vid torka första året medan busken etablerar sig, därefter klarar den sig oftast på naturlig nederbörd i Uppland - vattna extra bara vid långvarig torka under fruktsättningen i juni–juli, för bästa bärstorlek.',
     problem: [
-      { symptom: 'Bären försvinner rakt av busken precis när de mognat.', orsak: 'Fåglar - äter gärna vinbär så fort de mognar.', atgard: 'Fågelnät över busken i god tid innan mognad är det säkraste skyddet.' },
+      { symptom: 'Bären försvinner rakt av busken precis när de mognat.', orsak: 'Fåglar - äter gärna vinbär så fort de mognar.', atgard: 'Fågelnät över busken i god tid innan mognad är det säkraste skyddet. Välj nät med tät maska (max ca 2 cm) och dra det spänt utan lösa fickor - annars kan fåglar (och igelkottar) fastna i det, vilket är värre än inget skydd alls. Säkra nätet ordentligt ner mot marken runt om.' },
       { symptom: 'Bladen kruller ihop och blir rödaktiga tidigt på säsongen.', orsak: 'Bladlöss - vanliga på vinbär på våren, suger växtsaft från undersidan av unga blad.', atgard: 'Oftast bara kosmetiskt och påverkar sällan skörden. Vid kraftigt angrepp: spola bort med vattenstråle.' },
-      { symptom: 'Unga skott är avbitna.', orsak: 'Rådjur - nafsar ibland i unga skott men bryr sig sällan om vuxna, etablerade buskar.', atgard: 'Skydda unga buskar med nät de första säsongerna om du har rådjur i närheten.' }
+      { symptom: 'Unga skott är avbitna.', orsak: 'Rådjur - nafsar ibland i unga skott men bryr sig sällan om vuxna, etablerade buskar.', atgard: 'Ett nät eller en enkel bur runt busken de första säsongerna räcker oftast, även lågt - en trång inhägnad utan tydlig flyktväg avskräcker rådjur mer än höjden i sig. Ta bort skyddet när busken är etablerad.' }
     ]
   },
   svartavinbar: {
@@ -22,7 +22,7 @@ const BERRIES = {
     vattning: 'Vattna vid torka första året medan busken etablerar sig, därefter klarar den sig oftast bra på naturlig nederbörd i Uppland. Extra vatten under fruktsättning i juli ger större bär.',
     problem: [
       { symptom: 'Knopparna är påtagligt runda och svullna på vintern, och öppnar sig inte normalt på våren.', orsak: 'Vinbärsgallkvalster - en mikroskopisk kvalster som lever inuti knopparna och får dem att svälla, specifik för svarta vinbär.', atgard: 'Plocka bort och kasta (inte kompostera) de svullna knopparna på vintern innan de öppnar sig, för att minska spridning. Vid kraftigt angrepp kan det löna sig att skära ner hela grenar - kvalstret sprider dessutom ett virus som gradvis försämrar skörden om det får härja fritt år efter år.' },
-      { symptom: 'Bären försvinner rakt av busken precis när de mognat.', orsak: 'Fåglar.', atgard: 'Fågelnät över busken i god tid innan mognad.' }
+      { symptom: 'Bären försvinner rakt av busken precis när de mognat.', orsak: 'Fåglar.', atgard: 'Fågelnät över busken i god tid innan mognad, med tät maska (max ca 2 cm) draget spänt och säkrat ner mot marken - annars kan fåglar fastna i det.' }
     ]
   },
   vitavinbar: {
@@ -33,7 +33,7 @@ const BERRIES = {
     tips: 'Lika lättskött som röda vinbär men mindre känt – ett fint alternativ om du vill ha något lite ovanligare.',
     vattning: 'Samma som röda vinbär: vattna vid torka första året, därefter klarar busken sig mestadels på naturlig nederbörd. Extra vatten under fruktsättning i juni–juli ger större bär.',
     problem: [
-      { symptom: 'Bären försvinner precis när de mognat.', orsak: 'Fåglar - det klart största hotet mot skörden hos alla vinbär.', atgard: 'Nät över busken när bären börjar mogna, innan de blir attraktiva.' },
+      { symptom: 'Bären försvinner precis när de mognat.', orsak: 'Fåglar - det klart största hotet mot skörden hos alla vinbär.', atgard: 'Nät över busken när bären börjar mogna, innan de blir attraktiva. Använd tät maska (max ca 2 cm), dra det spänt utan lösa fickor och säkra det ner mot marken - löst hängande nät kan fånga in fåglar istället för att bara hålla dem ute.' },
       { symptom: 'Bladen kruller ihop tidigt på säsongen.', orsak: 'Bladlöss.', atgard: 'Oftast kosmetiskt. Spola bort med vattenstråle vid kraftigt angrepp.' }
     ]
   },
@@ -46,7 +46,7 @@ const BERRIES = {
     vattning: 'Vattna vid torka, särskilt under fruktsättning i juni–juli. Undvik att vattna direkt på bladen/bären - det ökar risken för mjöldagg.',
     problem: [
       { symptom: 'Vitt, mjöligt eller filtat överdrag på bären och skotten.', orsak: 'Amerikansk krusbärsmjöldagg - en mycket vanlig svampsjukdom specifikt för krusbär, gynnas av tät plantering och fuktigt väder.', atgard: 'Beskär för öppen krona så luften cirkulerar bättre (redan en del av skötseln). Ta bort och kasta angripna skott/bär. Fråga efter en mjöldaggständig sort i plantskolan om problemet återkommer.' },
-      { symptom: 'Skörden minskar trots att krusbär anses mindre lockande för fåglar.', orsak: 'Fåglar tar ändå av skörden om den är den enda mogna frukten i trädgården just då.', atgard: 'Nät kan behövas om du märker att skörden försvinner, även om risken är lägre än för söta bär som hallon.' }
+      { symptom: 'Skörden minskar trots att krusbär anses mindre lockande för fåglar.', orsak: 'Fåglar tar ändå av skörden om den är den enda mogna frukten i trädgården just då.', atgard: 'Nät (tät maska, max ca 2 cm, draget spänt och säkrat ner mot marken) kan behövas om du märker att skörden försvinner, även om risken är lägre än för söta bär som hallon.' }
     ]
   },
   hallon: {
@@ -57,9 +57,9 @@ const BERRIES = {
     tips: 'Kräver lite mer aktiv skötsel än övriga bär pga beskärning, men belönar med mycket skörd.',
     vattning: 'Vattna regelbundet, särskilt vid fruktsättning i juli–augusti - hallon har grunda rötter och gynnas av jämn fukt. Torka ger mindre och torrare bär.',
     problem: [
-      { symptom: 'Fåglar äter upp det mesta av skörden.', orsak: 'Fåglar är mycket förtjusta i hallon.', atgard: 'Nät är nästan ett måste om du vill ha någon skörd kvar till dig själv.' },
+      { symptom: 'Fåglar äter upp det mesta av skörden.', orsak: 'Fåglar är mycket förtjusta i hallon.', atgard: 'Nät är nästan ett måste om du vill ha någon skörd kvar till dig själv. Använd tät maska (max ca 2 cm), dra nätet spänt utan lösa fickor och säkra det ner mot marken - annars kan fåglar fastna i det.' },
       { symptom: 'Små, vita eller brunaktiga larver inuti eller vid bären när du plockar.', orsak: 'Hallonbagge - en skalbagge vars larver utvecklas inuti det mognande bäret, mycket vanlig i svenska hallonodlingar.', atgard: 'Plocka bären så fort de mognar. Vid kraftigt angrepp: ta bort och kasta de allra första, tidigast mogna bären där larverna ofta märks mest.' },
-      { symptom: 'Blad och unga skott är avätna.', orsak: 'Rådjur, särskilt tidigt på säsongen.', atgard: 'Nät eller staket runt beståndet under uppstartsfasen.' }
+      { symptom: 'Blad och unga skott är avätna.', orsak: 'Rådjur, särskilt tidigt på säsongen.', atgard: 'Ett nät eller en enkel bur runt beståndet under uppstartsfasen räcker oftast, även lågt - en trång inhägnad avskräcker mer än höjden i sig.' }
     ]
   },
   aronia: {
@@ -83,7 +83,7 @@ const BERRIES = {
     vattning: 'Håll jorden jämnt fuktig men aldrig vattendränkt - blåbär har grunda, finkorniga rötter som torkar ut snabbt men också lätt tar skada av syrebrist i blöt jord. Mulch (bark eller barrförna) hjälper jorden hålla jämn fukt.',
     problem: [
       { symptom: 'Bladen blir gula mellan de gröna bladnerverna.', orsak: 'Järnbrist orsakad av för hög jord-pH (för basisk jord) - blåbär kan inte ta upp järn effektivt om jorden inte är tillräckligt sur.', atgard: 'Kontrollera jordens pH och blanda in surjord/torv eller specialgödsel för surjordsväxter. Det här är den absolut vanligaste orsaken till svaga blåbärsbuskar i vanlig trädgårdsjord.' },
-      { symptom: 'Bären försvinner precis när de mognat.', orsak: 'Fåglar är mycket förtjusta i blåbär.', atgard: 'Nät behövs nästan alltid för att få behålla någon skörd själv.' }
+      { symptom: 'Bären försvinner precis när de mognat.', orsak: 'Fåglar är mycket förtjusta i blåbär.', atgard: 'Nät behövs nästan alltid för att få behålla någon skörd själv. Använd tät maska (max ca 2 cm), dra det spänt utan lösa fickor och säkra det ner mot marken - annars kan fåglar fastna i det.' }
     ]
   },
   bjornbar: {
@@ -95,7 +95,7 @@ const BERRIES = {
     vattning: 'Vattna vid torka, särskilt under fruktsättning i augusti–september. Undvik att vattna direkt på bären/bladen i fuktigt väder - det ökar risken för gråmögel.',
     problem: [
       { symptom: 'Bären ruttnar eller får ett grått, ludet mögelöverdrag innan de hinner mogna klart.', orsak: 'Gråmögel (Botrytis) - vanligt på mjuka bär i fuktigt väder, särskilt om kanorna ligger tätt.', atgard: 'Plocka bort och kasta angripna bär direkt så mögelsporerna inte sprids till friska bär. Ge kanorna gott om luft genom att binda upp dem ordentligt mot stödet.' },
-      { symptom: 'Fåglar och getingar tar av den mogna frukten.', orsak: 'Söt, mjuk frukt lockar båda.', atgard: 'Nät kan behövas vid kraftig konkurrens. Törnarna avskräcker rådjur ganska effektivt på egen hand.' }
+      { symptom: 'Fåglar och getingar tar av den mogna frukten.', orsak: 'Söt, mjuk frukt lockar båda.', atgard: 'Nät (tät maska, max ca 2 cm, draget spänt och säkrat ner mot marken) kan behövas vid kraftig konkurrens. Törnarna avskräcker rådjur ganska effektivt på egen hand.' }
     ]
   },
   havtorn: {
@@ -119,12 +119,12 @@ const BERRIES = {
     problem: [
       { symptom: 'Bären ruttnar med ett gråluddigt mögelöverdrag innan de hinner bli helt röda.', orsak: 'Gråmögel (Botrytis) - mycket vanligt på jordgubbar i fuktigt väder, särskilt om bären ligger direkt mot fuktig jord.', atgard: 'Halm under plantorna (redan en del av skötseln) håller bären upplyfta och torra. Plocka bort angripna bär direkt så mögelsporerna inte sprids.' },
       { symptom: 'Hål i bären, ofta med blanka slemspår.', orsak: 'Sniglar.', atgard: 'Halm under plantorna gör miljön mindre snigelvänlig. Ölfällor eller handplockning kvällstid vid kraftigt angrepp.' },
-      { symptom: 'Bären försvinner precis när de mognar.', orsak: 'Fåglar - tar gärna bären precis när de mognar.', atgard: 'Ett löst nät eller tyg över plantorna under mognadsperioden hjälper mycket.' },
-      { symptom: 'Hela plantor är avätna eller nedtrampade.', orsak: 'Rådjur - äter gärna hela plantan om de kommer åt.', atgard: 'Ett lågt staket runt odlingen är värt att överväga om rådjur är ett problem hos dig.' }
+      { symptom: 'Bären försvinner precis när de mognar.', orsak: 'Fåglar - tar gärna bären precis när de mognar.', atgard: 'Ett nät eller tyg med tät maska (max ca 2 cm) över plantorna under mognadsperioden hjälper mycket - dra det spänt och säkra kanterna mot marken så inte fåglar (eller igelkottar) fastnar under.' },
+      { symptom: 'Hela plantor är avätna eller nedtrampade.', orsak: 'Rådjur - äter gärna hela plantan om de kommer åt.', atgard: 'Ett lågt staket eller nät runt odlingen är oftast tillräckligt - en trång inhägnad utan tydlig flyktväg avskräcker rådjur mer än höjden i sig.' }
     ]
   }
 };
 
 // Allmänt rådjursskydd, visas som en introtext i Bärbuskar-vyn eftersom det
 // gäller hela trädgården snarare än en specifik gröda.
-const DEER_GENERAL_TIP = 'Rådjur äter i princip vad som helst om de är hungriga nog, men undviker ofta starkt doftande växter (lavendel, mynta, vitlök) och taggiga buskar. Ett enkelt staket runt de mest utsatta odlingarna, eller doftavskräckande medel från trädgårdsbutiken, är de mest pålitliga skydden.';
+const DEER_GENERAL_TIP = 'Rådjur äter i princip vad som helst om de är hungriga nog, men undviker ofta starkt doftande växter (lavendel, mynta, vitlök) och taggiga buskar - att kanta utsatta odlingar med sådana kan hjälpa lite. Ett nät eller en enkel bur runt just den mest utsatta odlingen brukar räcka även om den inte är hög, eftersom rådjur är mer försiktiga med att hoppa in i en trång inhägnad utan tydlig flyktväg än med att hoppa över ett öppet staket - en riktigt rådjurssäker stängsel runt hela tomten hade annars behövt vara minst 1,8–2 m. Doftbaserade avskräckningsmedel, t.ex. blodmjölsbaserade produkter som Plantskydd eller hemgjord vitlök/ägg-sprej, kan hjälpa som komplement men måste sprutas om efter regn och ger inget garanterat skydd.';

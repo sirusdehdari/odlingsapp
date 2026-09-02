@@ -31,7 +31,7 @@ const CROPS = {
     problem: [
       { symptom: 'Plantan skjuter snabbt i höjden och blommar istället för att bilda blad.', orsak: '"Går i blom" (bolting) - spenat är extremt känslig för värme och långa dagar, vanligt i juni–juli.', atgard: 'Så tidigt på våren och igen sent i juli–augusti för höstskörd, undvik att så mitt i högsommaren. Sorten Emilia tål värme lite bättre än de flesta.' },
       { symptom: 'Gulaktiga, ojämna fläckar på bladen, ibland med ett gråaktigt dun på undersidan.', orsak: 'Mjöldagg/bladmögel (peronospora) - vanligt vid fuktigt väder och tät plantering.', atgard: 'Ge plantorna mer utrymme för luftcirkulation, undvik att vattna direkt på bladen, och ta bort de värst drabbade bladen.' },
-      { symptom: 'Små hål eller silverglänsande slemspår på bladen.', orsak: 'Sniglar - särskilt vanligt i fuktig, skuggig miljö, vilket passar spenatens föredragna växtplats.', atgard: 'Plocka bort sniglar för hand kvällstid, eller lägg ut ölfällor. Kaffesump eller krossade äggskal runt plantorna kan avskräcka något.' }
+      { symptom: 'Små hål eller silverglänsande slemspår på bladen.', orsak: 'Sniglar - särskilt vanligt i fuktig, skuggig miljö, vilket passar spenatens föredragna växtplats.', atgard: 'Plocka bort sniglar för hand kvällstid, eller lägg ut ölfällor. Järnfosfat-baserade snigelmedel (säljs t.ex. som Ferramol eller Sluggo) är godkända för ekologisk odling och giftfria för husdjur och fåglar, till skillnad från äldre metaldehydbaserade medel. Kaffesump eller krossade äggskal runt plantorna kan avskräcka något, men effekten är osäker.' }
     ]
   },
 
@@ -81,7 +81,7 @@ const CROPS = {
     vattning: 'Vattna regelbundet så jorden hålls jämnt fuktig, aldrig helt torr - sallat har grunda rötter och stressas snabbt av torka, vilket gör den bitter och får den att gå i blom fortare. Räkna med vattning varannan till var tredje dag i normalt väder, dagligen vid värmebölja.',
     problem: [
       { symptom: 'Bladen smakar bittert.', orsak: 'Värmestress eller torka - sallat trivs bäst i svalare väder och blir bitter av påfrestning.', atgard: 'Vattna mer regelbundet och välj värmetåliga sorter som Batavia för sommarsådd. Din halvskuggiga odlingsplats hjälper redan här genom att undvika den värsta middagshettan.' },
-      { symptom: 'Hål i bladen, ofta med blanka slemspår.', orsak: 'Sniglar - ett av de vanligaste problemen med sallat, särskilt i fuktig väderlek.', atgard: 'Plocka bort sniglar för hand kvällstid eller tidig morgon, använd ölfällor, eller strö ut skalgrus/kaffesump runt plantorna som barriär.' },
+      { symptom: 'Hål i bladen, ofta med blanka slemspår.', orsak: 'Sniglar - ett av de vanligaste problemen med sallat, särskilt i fuktig väderlek.', atgard: 'Plocka bort sniglar för hand kvällstid eller tidig morgon, använd ölfällor, eller strö ut skalgrus som barriär. Järnfosfat-baserade snigelmedel (t.ex. Ferramol eller Sluggo) är godkända för ekologisk odling och giftfria för husdjur, till skillnad från äldre metaldehydbaserade medel. Vid återkommande, kraftiga angrepp: nematoder (mikroskopiska rundmaskar som vattnas ut i jorden) är en biologisk, giftfri metod som angriper sniglar under jord.' },
       { symptom: 'Plantan skjuter upp en hög stjälk och blommar.', orsak: '"Går i blom" - utlöses av värme och långa dagar, snabbare hos huvudsallat än klippsallat.', atgard: 'Så nya omgångar var 3:e vecka så du alltid har yngre plantor på gång, och skörda i tid innan stjälken börjar sträcka sig.' }
     ]
   },
@@ -131,7 +131,7 @@ const CROPS = {
     companionGood: ['morotter', 'radisor'], companionBad: ['lok', 'vitlok'],
     vattning: 'Vattna regelbundet, och extra rikligt när plantorna blommar och sätter baljor - det är då de är känsligast för torka, och vattenbrist ger färre och mindre baljor. I normalt väder räcker 2–3 gånger i veckan, oftare vid långvarig torka.',
     problem: [
-      { symptom: 'Unga skott och blad är avbitna, ibland hela plantor nedbetade.', orsak: 'Rådjur - särskilt tidigt på säsongen innan plantorna hunnit bli kraftiga och mindre attraktiva.', atgard: 'Sätt upp ett enkelt nät eller staket runt lådan under uppstartsfasen, ta bort det när plantorna blivit kraftigare.' },
+      { symptom: 'Unga skott och blad är avbitna, ibland hela plantor nedbetade.', orsak: 'Rådjur - särskilt tidigt på säsongen innan plantorna hunnit bli kraftiga och mindre attraktiva.', atgard: 'Ett nät eller en enkel bur runt just den här lådan brukar räcka även om den inte är hög - rådjur är betydligt mer försiktiga med att hoppa in i en trång inhägnad utan tydlig flyktväg än med att hoppa över ett öppet staket. Ta bort skyddet när plantorna blivit kraftigare och mindre lockande.' },
       { symptom: 'Täta kluster av små löss längst upp på skotten.', orsak: 'Bladlöss - dras ofta till unga, mjuka skott.', atgard: 'Spola bort med en vattenstråle, eller nyp av toppskotten där lössen samlas (fungerar ofta bra på ärtväxter). Dill eller ringblomma i närheten lockar till sig nyckelpigor och blomflugor som äter upp bladlössen.' },
       { symptom: 'Vita, mjöliga fläckar på bladen sent på säsongen.', orsak: 'Mjöldagg - vanligt i augusti när nätterna blir svalare och fuktigare samtidigt som dagarna fortfarande är varma.', atgard: 'Ge plantorna gott om luft mellan sig och undvik att vattna direkt på bladen. Sent på säsongen är det sällan värt att behandla mer aktivt - skörda det du kan innan angreppet tar över.' }
     ]
@@ -155,7 +155,7 @@ const CROPS = {
     companionGood: ['potatis'], companionBad: ['lok', 'vitlok'],
     vattning: 'Ganska torktålig jämfört med de flesta grönsaker - vattna när jordytan känns torr, inte efter ett fast schema. Viktigast att hålla jämn fukt är under blomning och tidig baljsättning, då torka ger färre baljor.',
     problem: [
-      { symptom: 'Unga plantor är avbitna eller kraftigt nedätna.', orsak: 'Rådjur - tycker särskilt om unga, mjuka bondbönsplantor.', atgard: 'Skydda med nät tills plantorna är stadiga och lite kraftigare, ta sedan bort nätet.' },
+      { symptom: 'Unga plantor är avbitna eller kraftigt nedätna.', orsak: 'Rådjur - tycker särskilt om unga, mjuka bondbönsplantor.', atgard: 'Ett nät eller en enkel bur runt lådan de första veckorna räcker oftast, även lågt - rådjur tvekar mer inför en trång inhägnad än ett öppet staket att hoppa över. Ta bort skyddet när plantorna är stadiga och kraftigare.' },
       { symptom: 'Tjocka, svarta kluster av löss längst upp på stjälkarna.', orsak: 'Svart bönlus - samlas nästan alltid på just toppskotten hos bondböna, sällan någon annanstans på plantan.', atgard: 'Nyp bort toppskotten så fort första baljorna satt sig - det är där lössen sitter, och plantan mognar sina baljor fint ändå. Ringblomma eller dill i närheten drar till sig nyckelpigor som äter bladlöss.' }
     ]
   },
@@ -223,8 +223,8 @@ const CROPS = {
     companionGood: ['dill'], companionBad: ['jordgubbar', 'tomat'],
     vattning: 'Vattna regelbundet, ca 2–3 gånger i veckan - grönkål klarar kortare torrperioder bättre än de flesta kålsorter men växer långsammare och blir segare i bladen om den får torka ut ofta.',
     problem: [
-      { symptom: 'Bladen är fulla av hål, ibland bara bladnerverna kvar.', orsak: 'Kålfjärilslarver (kålmask) - de gröna larverna äter effektivt av bladen under sommaren, äggen läggs av vita och kålfjärilar.', atgard: 'Insektsnät direkt vid plantering är det mest pålitliga skyddet och stoppar fjärilarna från att lägga ägg överhuvudtaget. Upptäcker du redan larver: plocka bort dem för hand, titta särskilt på undersidan av bladen.' },
-      { symptom: 'Kålblad är avbitna eller hela plantor nedätna.', orsak: 'Rådjur - äter gärna kålblad om de kommer åt.', atgard: 'Ett nät eller staket runt lådan är det mest pålitliga skyddet.' },
+      { symptom: 'Bladen är fulla av hål, ibland bara bladnerverna kvar.', orsak: 'Kålfjärilslarver (kålmask) - de gröna larverna äter effektivt av bladen under sommaren, äggen läggs av vita och kålfjärilar.', atgard: 'Insektsnät direkt vid plantering är det mest pålitliga skyddet och stoppar fjärilarna från att lägga ägg överhuvudtaget. Upptäcker du redan larver: plocka bort dem för hand (titta särskilt på undersidan av bladen), eller använd BT-medel (Bacillus thuringiensis, säljs bl.a. som Turex) - ett biologiskt, ekologiskt godkänt bekämpningsmedel som bara påverkar fjärilslarver och är ofarligt för bin och andra nyttodjur.' },
+      { symptom: 'Kålblad är avbitna eller hela plantor nedätna.', orsak: 'Rådjur - kål är en av deras favoriter, och till skillnad från många andra grödor slutar de sällan tycka om den bara för att plantan blir större.', atgard: 'Ett nät eller en bur runt lådan är det mest pålitliga skyddet, och behöver sitta kvar hela säsongen (inte bara medan plantan är ung). Behöver inte vara högt - rådjur tvekar mer inför en trång inhägnad utan tydlig flyktväg än inför att hoppa över ett öppet staket. Ett riktigt rådjurssäkert perimeterstängsel runt hela tomten hade behövt vara minst 1,8–2 m högt, vilket sällan är rimligt - därför är det ofta smartare att skydda den enskilda lådan istället.' },
       { symptom: 'Små, runda hål, plantan verkar "skjuten med hagel".', orsak: 'Jordloppor - vanliga tidigt på säsongen på unga kålplantor.', atgard: 'Insektsnätet som skyddar mot kålfjärilar hjälper ofta även här. Äldre, mer etablerade plantor klarar sig oftast bra ändå.' }
     ]
   },
@@ -247,7 +247,7 @@ const CROPS = {
     vattning: 'Vattna regelbundet, 2–3 gånger i veckan - mangold är förlåtande och klarar kortare torka bättre än de flesta bladgrönsaker, men jämn vattning ger mörkare, saftigare blad.',
     problem: [
       { symptom: 'Vita eller ljusa, slingrande gångar inuti bladen.', orsak: 'Minerarflugans larver - gräver sig fram mellan bladets ytskikt och lämnar synliga "tunnlar".', atgard: 'Klipp bort och släng de drabbade bladen, nya friska blad kommer. Sällan ett stort problem eftersom mangold ständigt bildar nya blad.' },
-      { symptom: 'Hål i bladen med blanka slemspår.', orsak: 'Sniglar.', atgard: 'Plocka bort för hand kvällstid, eller använd ölfällor runt plantorna.' }
+      { symptom: 'Hål i bladen med blanka slemspår.', orsak: 'Sniglar.', atgard: 'Plocka bort för hand kvällstid, eller använd ölfällor runt plantorna. Järnfosfat-baserade snigelmedel (t.ex. Ferramol eller Sluggo) är godkända för ekologisk odling och giftfria för husdjur.' }
     ]
   },
 
@@ -447,9 +447,9 @@ const CROPS = {
     companionGood: ['dill'], companionBad: ['jordgubbar', 'tomat'],
     vattning: 'Vattna rikligt och jämnt, gärna 3 gånger i veckan - vitkål bildar stora, vattenrika huvuden och är känsligare för torka än de flesta kålsorter. Ojämn vattning (särskilt en lång torrperiod följt av kraftigt regn) kan få huvuden att spricka.',
     problem: [
-      { symptom: 'Bladen är fulla av hål, ibland bara nerverna kvar.', orsak: 'Kålfjärilslarver (kålmask) - äter effektivt av bladen under sommaren.', atgard: 'Insektsnät direkt vid plantering är det mest pålitliga skyddet. Upptäcker du redan larver: plocka bort dem för hand, titta på undersidan av bladen.' },
+      { symptom: 'Bladen är fulla av hål, ibland bara nerverna kvar.', orsak: 'Kålfjärilslarver (kålmask) - äter effektivt av bladen under sommaren.', atgard: 'Insektsnät direkt vid plantering är det mest pålitliga skyddet. Upptäcker du redan larver: plocka bort dem för hand (titta på undersidan av bladen), eller använd BT-medel (Bacillus thuringiensis, t.ex. Turex) - ett biologiskt, ekologiskt godkänt medel som bara påverkar fjärilslarver och är ofarligt för bin.' },
       { symptom: 'Kålhuvudet har spruckit.', orsak: 'Kraftigt regn eller vattning efter en längre torrperiod - huvudet suger upp vatten snabbare än det yttre skalet hinner växa.', atgard: 'Vattna jämnare över säsongen. Ett spruckit huvud går fortfarande bra att äta, men skörda det direkt innan det ruttnar i sprickan.' },
-      { symptom: 'Kålblad avbitna eller hela plantor nedätna.', orsak: 'Rådjur - mycket förtjusta i kål.', atgard: 'Ett nät eller staket runt lådan rekommenderas starkt om du har rådjur i närheten.' }
+      { symptom: 'Kålblad avbitna eller hela plantor nedätna.', orsak: 'Rådjur - mycket förtjusta i kål, och tycker om den genom hela säsongen, inte bara som unga plantor.', atgard: 'Ett nät eller en bur runt lådan rekommenderas starkt om du har rådjur i närheten, och behöver sitta kvar hela säsongen. Behöver inte vara högt - en trång inhägnad avskräcker rådjur bättre än höjden i sig, eftersom de ogillar att sakna en tydlig flyktväg. Ett heltäckande, rådjurssäkert staket runt hela tomten hade behövt vara minst 1,8–2 m, sällan rimligt i en villaträdgård.' }
     ]
   },
 
@@ -473,7 +473,8 @@ const CROPS = {
       { symptom: 'Bruna, snabbt växande fläckar på blad och stjälk, ofta efter en fuktig period - hela plantan kan vissna på några dagar.', orsak: 'Potatisbladmögel (samma sjukdom som drabbar potatis, eftersom de är samma växtfamilj) - den allvarligaste risken för utomhusodlad tomat i svenskt klimat, gynnas kraftigt av fukt och sval väderlek.', atgard: 'Plantera inte tomat och potatis nära varandra. Ge plantorna gott om utrymme för luftcirkulation, vattna aldrig på bladen, och ta bort angripna blad/plantor direkt (kasta, kompostera inte). Överväg tak/skydd mot regn om problemet återkommer år efter år.' },
       { symptom: 'Bruna fläckar med tydliga koncentriska ringar (som en pilskiva), börjar på de äldsta, nedersta bladen.', orsak: 'Torrfläcksjuka (Alternaria) - vanlig svampsjukdom, mindre akut än bladmögel men sprider sig uppåt i plantan över tid.', atgard: 'Ta bort angripna blad löpande. Undvik att vattna på bladen och se till att de nedersta bladen inte ligger an mot fuktig jord.' },
       { symptom: 'Ett läderartat, insjunket, brunsvart parti i botten av frukten (motsatt stjälken).', orsak: 'Blomändröta - orsakas av kalciumbrist i just den frukten, men den bakomliggande orsaken är nästan alltid ojämn vattning snarare än brist på kalcium i jorden.', atgard: 'Vattna jämnare och mer regelbundet. De drabbade frukterna går inte att rädda, men plocka bort dem så plantan lägger energi på nya frukter istället.' },
-      { symptom: 'Frukterna spricker, ofta i cirklar runt stjälkänden.', orsak: 'Snabb vattenupptagning efter en torr period - frukten växer fortare än skalet hinner följa med.', atgard: 'Vattna jämnare över hela säsongen istället för sällan och rikligt.' }
+      { symptom: 'Frukterna spricker, ofta i cirklar runt stjälkänden.', orsak: 'Snabb vattenupptagning efter en torr period - frukten växer fortare än skalet hinner följa med.', atgard: 'Vattna jämnare över hela säsongen istället för sällan och rikligt.' },
+      { symptom: 'Plantorna är avbetade eller uppätna.', orsak: 'Rådjur - inte deras favoritföda (kål och baljväxter går oftast först), men äts definitivt om de är hungriga nog, särskilt unga plantor.', atgard: 'Ett nät eller en enkel bur runt lådan räcker oftast, även lågt - en trång inhägnad utan tydlig flyktväg avskräcker rådjur mer än höjden i sig. Ett heltäckande stängsel runt hela tomten hade annars behövt vara minst 1,8–2 m för att vara pålitligt.' }
     ]
   },
 
@@ -496,7 +497,8 @@ const CROPS = {
     problem: [
       { symptom: 'Gurkorna smakar beskt/bittert, särskilt vid stjälkänden.', orsak: 'Stress hos plantan, oftast torka eller stora temperaturväxlingar - gurkan bildar då mer av det bittra ämnet cucurbitacin.', atgard: 'Håll vattningen jämnare och rikligare, särskilt i värmeböljor. Skär bort den bittraste biten (närmast stjälken) om det redan hänt.' },
       { symptom: 'Vita, mjöliga fläckar som breder ut sig över bladen, ofta i augusti.', orsak: 'Mjöldagg - mycket vanligt sent på säsongen när nätterna blir svalare och fuktigare.', atgard: 'Spraya med utspädd mjölk (1 del mjölk, 9 delar vatten) på bladen, eller ta bort de värst drabbade bladen. Sällan värt att bekämpa hårt sent på säsongen - skörda det du kan.' },
-      { symptom: 'Bladen är gulfläckiga/mosaikmönstrade och plantan växer svagt.', orsak: 'Gurkmosaikvirus - sprids av bladlöss, finns ingen bot.', atgard: 'Ta bort och kasta den angripna plantan för att undvika spridning till andra gurk- och squashplantor. Håll koll på bladlöss tidigt (se kompanjon-tipset för dill) för att minska risken.' }
+      { symptom: 'Bladen är gulfläckiga/mosaikmönstrade och plantan växer svagt.', orsak: 'Gurkmosaikvirus - sprids av bladlöss, finns ingen bot.', atgard: 'Ta bort och kasta den angripna plantan för att undvika spridning till andra gurk- och squashplantor. Håll koll på bladlöss tidigt (se kompanjon-tipset för dill) för att minska risken.' },
+      { symptom: 'Blad och unga skott är avätna.', orsak: 'Rådjur - äter gärna av de stora, mjuka bladen, särskilt på unga plantor.', atgard: 'Ett nät eller en enkel bur runt lådan räcker oftast, även lågt - en trång inhägnad utan tydlig flyktväg avskräcker rådjur mer än höjden i sig. Klätterstödet (spaljé) kan samtidigt göra det svårare för dem att komma åt bladen på vinsorter.' }
     ]
   },
 
@@ -519,7 +521,8 @@ const CROPS = {
     problem: [
       { symptom: 'Blommorna faller av utan att bilda frukt.', orsak: 'För kalla nätter - paprika är extra känslig och sätter sällan frukt om nattemperaturen upprepat går under ca 15°C, vilket händer även svenska sommarnätter.', atgard: 'Ge plantan den varmaste, mest lä-skyddade platsen du har, gärna nära en vägg som lagrar värme. Förvänta dig en mer varierande skörd år till år beroende på sommarens väder - detta är en gräns för vad som är rimligt i Uppland, inte ett skötselfel.' },
       { symptom: 'Vita eller ljusa, papperslika, insjunkna fläckar på frukten.', orsak: 'Solskador - uppstår när frukten exponeras för stark, direkt sol, ofta efter att skyddande blad tagits bort eller fallit av.', atgard: 'Undvik att beskära bort för mycket bladverk runt frukterna. Redan drabbade frukter går att äta, skär bara bort den skadade biten.' },
-      { symptom: 'Klasar av små löss på undersidan av bladen och nya skott.', orsak: 'Bladlöss - vanliga på paprika och chili.', atgard: 'Spola bort med vattenstråle, eller plantera basilika (redan en bra kompanjon) i närheten - dess doft avskräcker en del skadedjur samtidigt som blommande örter lockar nyckelpigor.' }
+      { symptom: 'Klasar av små löss på undersidan av bladen och nya skott.', orsak: 'Bladlöss - vanliga på paprika och chili.', atgard: 'Spola bort med vattenstråle, eller plantera basilika (redan en bra kompanjon) i närheten - dess doft avskräcker en del skadedjur samtidigt som blommande örter lockar nyckelpigor.' },
+      { symptom: 'Plantorna är avbetade eller helt uppätna, ibland efter att de redan satt frukt.', orsak: 'Rådjur - paprika/chili är inte deras favoritföda (kål och baljväxter går oftast först), men äts definitivt om de är hungriga nog eller om annat är slut, särskilt tidigt på säsongen innan plantan hunnit bli kraftig.', atgard: 'Ett nät eller en enkel bur runt lådan räcker oftast, även lågt - rådjur är mer försiktiga med att hoppa in i en trång inhägnad utan tydlig flyktväg än med att hoppa över ett öppet staket. Ett heltäckande, rådjurssäkert stängsel runt hela tomten hade annars behövt vara minst 1,8–2 m högt. Doftbaserade avskräckningsmedel (vitlök/ägg-sprej, eller kommersiella blodmjölsbaserade produkter som Plantskydd) kan hjälpa som komplement men måste sprutas om efter regn och ger inget garanterat skydd.' }
     ]
   },
 
@@ -541,7 +544,8 @@ const CROPS = {
     vattning: 'Vattna rikligt varje dag i varmt väder, vid roten - squash har stora blad och förlorar mycket vatten genom avdunstning. Minska något vid svalare väderlek men låt aldrig jorden torka ut helt.',
     problem: [
       { symptom: 'Frukten börjar ruttna/bli mjuk och svart i blomänden medan resten fortfarande verkar växa.', orsak: 'Ofullständig pollinering - squash behöver bin eller humlor besöka både han- och honblommor; blir pollineringen ofullständig utvecklas inte hela frukten och änden ruttnar.', atgard: 'Pollinera för hand med en mjuk pensel: för pollen från hanblomman (rak stjälk, ingen liten frukt bakom) till honblomman (har en liten frukt-ansats bakom kronbladen redan innan pollinering).' },
-      { symptom: 'Vita, mjöliga fläckar som breder ut sig över bladen.', orsak: 'Mjöldagg - mycket vanligt på squash och andra gurkväxter, särskilt sent på säsongen.', atgard: 'Spraya med utspädd mjölk (1 del mjölk, 9 delar vatten) på bladen, eller ta bort de värst drabbade bladen. Påverkar sällan redan bildade frukter.' }
+      { symptom: 'Vita, mjöliga fläckar som breder ut sig över bladen.', orsak: 'Mjöldagg - mycket vanligt på squash och andra gurkväxter, särskilt sent på säsongen.', atgard: 'Spraya med utspädd mjölk (1 del mjölk, 9 delar vatten) på bladen, eller ta bort de värst drabbade bladen. Påverkar sällan redan bildade frukter.' },
+      { symptom: 'De stora bladen är avätna eller hela plantan kraftigt nedbetad.', orsak: 'Rådjur - de stora, mjuka bladen är lockande, särskilt på unga plantor.', atgard: 'Ett nät eller en enkel bur runt lådan räcker oftast, även lågt - en trång inhägnad utan tydlig flyktväg avskräcker rådjur mer än höjden i sig.' }
     ]
   },
 
@@ -563,7 +567,8 @@ const CROPS = {
     vattning: 'Vattna måttligt - låt jorden torka ut 2–3 cm ner mellan vattningarna snarare än att hålla den jämnt fuktig. Padrón är mer torktålig än paprika men ogillar stående blöt jord.',
     problem: [
       { symptom: 'Blommorna faller av utan att bilda frukt.', orsak: 'Precis som paprika (samma växtfamilj) är Padrón känslig för kalla nätter och sätter sämre frukt om temperaturen faller mycket under natten.', atgard: 'Ge den varmaste och mest vindskyddade platsen i din odling. En del år ger helt enkelt mindre skörd på grund av sommarens väder - detta är förväntat i vårt klimat, inte ett tecken på att något gjorts fel.' },
-      { symptom: 'Frukterna är alla milda, ingen enda är stark.', orsak: 'Slumpen - hur stark en Padrón-frukt blir varierar naturligt även på samma planta, och stress (torka, värme) tenderar att ge fler starka frukter.', atgard: 'Inget att åtgärda - det är själva charmen med grödan. Lite vattenstress kan öka andelen starka frukter om du vill experimentera.' }
+      { symptom: 'Frukterna är alla milda, ingen enda är stark.', orsak: 'Slumpen - hur stark en Padrón-frukt blir varierar naturligt även på samma planta, och stress (torka, värme) tenderar att ge fler starka frukter.', atgard: 'Inget att åtgärda - det är själva charmen med grödan. Lite vattenstress kan öka andelen starka frukter om du vill experimentera.' },
+      { symptom: 'Plantorna är avbetade eller uppätna, ibland efter att de redan satt frukt.', orsak: 'Rådjur - paprika/chili-växter är inte deras favoritföda (de föredrar kål och baljväxter), men äts definitivt om de är hungriga nog eller om annat är slut, särskilt tidigt på säsongen innan plantan hunnit bli kraftig.', atgard: 'Ett nät eller en enkel bur runt lådan räcker oftast, även lågt - rådjur är mer försiktiga med att hoppa in i en trång inhägnad utan tydlig flyktväg än med att hoppa över ett öppet staket. Ett heltäckande, rådjurssäkert stängsel runt hela tomten hade annars behövt vara minst 1,8–2 m högt. Doftbaserade avskräckningsmedel (vitlök/ägg-sprej, eller kommersiella blodmjölsbaserade produkter som Plantskydd) kan hjälpa som komplement men måste sprutas om efter regn och ger inget garanterat skydd.' }
     ]
   },
 
@@ -672,7 +677,7 @@ const CROPS = {
     vattning: 'Vattna jämnt, 2–3 gånger i veckan - persilja har ett djupare rotsystem än de flesta örter men gynnas ändå av jämn fukt, särskilt under den långsamma groddfasen.',
     problem: [
       { symptom: 'Fröna gror väldigt långsamt eller ojämnt.', orsak: 'Persilja har naturligt långsam och ojämn grodd (2–4 veckor) - helt normalt, inget fel på fröna.', atgard: 'Ha tålamod och håll jorden jämnt fuktig under hela groddperioden. Blötlägg gärna fröna en natt före sådd för att korta ner tiden något.' },
-      { symptom: 'Hål i bladen med blanka slemspår.', orsak: 'Sniglar - trivs i persiljans fuktiga, halvskuggiga växtplats.', atgard: 'Plocka bort för hand kvällstid, eller använd ölfällor.' }
+      { symptom: 'Hål i bladen med blanka slemspår.', orsak: 'Sniglar - trivs i persiljans fuktiga, halvskuggiga växtplats.', atgard: 'Plocka bort för hand kvällstid, eller använd ölfällor. Järnfosfat-baserade snigelmedel (t.ex. Ferramol eller Sluggo) är godkända för ekologisk odling och giftfria för husdjur.' }
     ]
   },
 
@@ -719,7 +724,7 @@ const CROPS = {
     problem: [
       { symptom: 'Vita, mjöliga fläckar på bladen sent på säsongen.', orsak: 'Mjöldagg - vanligt i augusti när nätterna blir svalare och fuktigare.', atgard: 'Ge plantorna gott om luft mellan sig och ta bort de värst angripna bladen. Sällan värt att behandla mer aktivt sent på säsongen.' },
       { symptom: 'Klasar av löss på skotten.', orsak: 'Bladlöss - vanliga på ärtväxter.', atgard: 'Spola bort med vattenstråle. Dill eller ringblomma i närheten lockar till sig nyckelpigor som äter bladlöss.' },
-      { symptom: 'Unga plantor avbitna eller nedätna.', orsak: 'Rådjur - särskilt tidigt på säsongen.', atgard: 'Skydda med nät eller staket tills plantorna är stadiga.' }
+      { symptom: 'Unga plantor avbitna eller nedätna.', orsak: 'Rådjur - särskilt tidigt på säsongen.', atgard: 'Ett nät eller en enkel bur runt lådan de första veckorna räcker oftast, även lågt - en trång inhägnad avskräcker mer än höjden i sig eftersom rådjur ogillar att sakna en tydlig flyktväg. Ta bort skyddet när plantorna blivit stadiga och kraftigare.' }
     ]
   },
 
@@ -763,9 +768,9 @@ const CROPS = {
     companionGood: ['dill'], companionBad: ['jordgubbar', 'tomat'],
     vattning: 'Vattna rikligt och regelbundet hela säsongen, 3 gånger i veckan - den långa växtsäsongen gör brysselkål känsligare för torrperioder än snabbare kålsorter.',
     problem: [
-      { symptom: 'Bladen är fulla av hål.', orsak: 'Kålfjärilslarver (kålmask).', atgard: 'Insektsnät direkt vid plantering är det mest pålitliga skyddet. Redan larver: plocka bort för hand, titta på undersidan av bladen.' },
+      { symptom: 'Bladen är fulla av hål.', orsak: 'Kålfjärilslarver (kålmask).', atgard: 'Insektsnät direkt vid plantering är det mest pålitliga skyddet. Redan larver: plocka bort för hand (titta på undersidan av bladen), eller använd BT-medel (Bacillus thuringiensis, t.ex. Turex) - ett biologiskt, ekologiskt godkänt medel som bara påverkar fjärilslarver och är ofarligt för bin.' },
       { symptom: 'Kålhuvudena är lösa och håller inte ihop, mer som öppna blad.', orsak: 'För varmt väder under bildningen, eller ojämn vattning/näring.', atgard: 'Håll jämn vattning och näring hela säsongen. Lösa huvuden går fortfarande fint att äta.' },
-      { symptom: 'Kålblad avbitna eller hela plantor nedätna.', orsak: 'Rådjur.', atgard: 'Ett nät eller staket runt lådan är det mest pålitliga skyddet.' }
+      { symptom: 'Kålblad avbitna eller hela plantor nedätna.', orsak: 'Rådjur - en av deras favoriter, hela säsongen, inte bara som unga plantor.', atgard: 'Ett nät eller en bur runt lådan är det mest pålitliga skyddet och behöver sitta kvar hela säsongen. Behöver inte vara högt - en trång inhägnad utan tydlig flyktväg avskräcker rådjur mer än höjden gör. Ett rådjurssäkert perimeterstängsel runt hela tomten hade annars behövt vara minst 1,8–2 m.' }
     ]
   },
 
@@ -788,7 +793,8 @@ const CROPS = {
     problem: [
       { symptom: 'Huvudet är litet, missfärgat, eller börjar blomma för tidigt utan att bli riktigt tätt.', orsak: '"Knappbildning" (buttoning) - orsakas nästan alltid av stress: ojämn vattning, näringsbrist, eller kraftiga temperaturväxlingar tidigt i tillväxten.', atgard: 'Håll extra jämn vattning och näring redan från att plantan är liten. Ett redan drabbat huvud går inte att rädda, men det går fint att äta även om det är mindre.' },
       { symptom: 'Huvudet har gulaktiga eller bruna fläckar.', orsak: 'För mycket direkt sol på huvudet under bildningen.', atgard: 'Vik ihop några yttre blad löst över huvudet så fort det börjar synas (golfbollstort) för att skugga det.' },
-      { symptom: 'Hål i bladen.', orsak: 'Kålfjärilslarver, samma som på andra kålsorter.', atgard: 'Insektsnät direkt vid plantering.' }
+      { symptom: 'Hål i bladen.', orsak: 'Kålfjärilslarver, samma som på andra kålsorter.', atgard: 'Insektsnät direkt vid plantering är förstahandsvalet. Har larverna redan hunnit etablera sig kan BT-medel (Bacillus thuringiensis, säljs bl.a. som Turex) användas - ett biologiskt, ekologiskt godkänt bekämpningsmedel som bara påverkar fjärilslarver och är ofarligt för bin och andra nyttodjur.' },
+      { symptom: 'Kålblad avbitna eller hela plantor nedätna.', orsak: 'Rådjur - kål är en av deras favoriter, hela säsongen.', atgard: 'Ett nät eller en bur runt lådan är det mest pålitliga skyddet och behöver sitta kvar hela säsongen. Behöver inte vara högt - en trång inhägnad utan tydlig flyktväg avskräcker mer än höjden i sig.' }
     ]
   },
 
